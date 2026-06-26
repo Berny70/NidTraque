@@ -159,10 +159,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
 /* boutons secondaires */
 .row-btns { display: flex; gap: 10px; }
 .btn-sec {
-  flex: 1; padding: 13px 8px;
+  width: 100%; padding: 14px;
   border: 2px solid var(--navy); border-radius: var(--radius);
   background: #fff; color: var(--navy);
-  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-size: 14px; font-weight: 700; cursor: pointer;
   text-align: center; line-height: 1.4;
 }
 .btn-sec:active { background: #e8f0f8; }
@@ -294,15 +294,15 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
 
     </div>
 
-    <!-- bouton enregistrer -->
+    <!-- boutons en colonne -->
     <button class="btn-enregister" id="btn-enregister" disabled onclick="doSignal()">
-      Enregistrer<br>la direction carte partagée
+      Enregistrer la direction carte partagée
     </button>
-
-    <!-- boutons secondaires -->
-    <div class="row-btns">
-      <button class="btn-sec" onclick="showMap()">Visualiser mes<br>signalements</button>
-      <button class="btn-sec danger" onclick="cancelLast()">Annuler<br>dernière signalisation</button>
+    <button class="btn-sec" onclick="showMapMine()">Visualiser mes signalements</button>
+    <button class="btn-sec" onclick="showMap()">Accès à la carte partagée</button>
+    <button class="btn-sec danger" onclick="cancelLast()">Annuler dernière signalisation</button>
+    <div style="text-align:center; font-size:13px; color:var(--muted); font-style:italic; padding: 4px 0 8px;">
+      🐝 Ensemble, traquons les nids !
     </div>
 
   </div>
@@ -633,11 +633,19 @@ async function cancelLast() {
 // ════════════════════════════════════════════
 //  CARTE
 // ════════════════════════════════════════════
-function showMap() { showScreen('map'); }
+function showMapMine() { showScreen('map'); _mineOnly = true;  initMap(); }
+function showMap()     { showScreen('map'); _mineOnly = false; initMap(); }
+let _mineOnly = false;
 
 function initMap() {
-  if (mapInited) { refreshMap(); return; }
+  if (mapInited) { 
+    document.querySelector('#screen-map .map-header span').textContent = 
+      _mineOnly ? '👤 Mes signalements' : '🗺️ Carte partagée';
+    refreshMap(); return; 
+  }
   mapInited = true;
+  document.querySelector('#screen-map .map-header span').textContent = 
+    _mineOnly ? '👤 Mes signalements' : '🗺️ Carte partagée';
 
   map = L.map('map', { center: [45.1, 5.7], zoom: 13, zoomControl: true, attributionControl: true });
 
@@ -665,12 +673,15 @@ async function refreshMap() {
   since.setDate(since.getDate() - (pilotData?.validity_days || 7));
 
   try {
-    const { data, error } = await sb
+    let query = sb
       .from('signals')
       .select('lat, lon, azimuth, phone_id, created_at, id')
       .eq('pilot_id', pilotData.pilot_id)
       .gte('created_at', since.toISOString());
 
+    if (_mineOnly) query = query.eq('phone_id', phoneId);
+
+    const { data, error } = await query;
     if (error) throw error;
     if (!data?.length) return;
 
