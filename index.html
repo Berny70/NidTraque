@@ -476,16 +476,19 @@ async function init() {
   }
 
   // Détecter si pilote/admin → afficher bouton Partager
+  const forceAdmin = new URLSearchParams(location.search).get('admin') === '1';
   try {
     const { data: ap } = await sb
       .from('admin_profiles')
       .select('id, role')
       .eq('phone_id', phoneId)
       .maybeSingle();
-    if (ap && ['pilot','admin_dept','superadmin'].includes(ap.role)) {
+    if (forceAdmin || (ap && ['pilot','admin_dept','superadmin'].includes(ap.role))) {
       document.getElementById('btn-share').style.display = 'block';
     }
-  } catch(e) { /* pas pilote */ }
+  } catch(e) {
+    if (forceAdmin) document.getElementById('btn-share').style.display = 'block';
+  }
 
   // Remplir header
   document.getElementById('hdr-admin').textContent      = pilotData.admin_nom;
