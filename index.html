@@ -302,6 +302,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
     <button class="btn-sec" onclick="showMapMine()">Visualiser mes signalements</button>
     <button class="btn-sec" onclick="showMap()">Accès à la carte partagée</button>
     <button class="btn-sec danger" onclick="cancelLast()">Annuler dernière signalisation</button>
+    <button class="btn-sec" id="btn-share" style="display:none;border-color:#2a7fc1;color:#2a7fc1;" onclick="showQR()">📲 Partager l'application</button>
     <div style="text-align:center; font-size:13px; color:var(--muted); font-style:italic; padding: 4px 0 8px;">
       🐝 Ensemble, traquons les nids !
     </div>
@@ -318,8 +319,16 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
   <div id="map"></div>
 </div>
 
-<!-- toast -->
-<div class="toast" id="toast"></div>
+<!-- modale QR code pilote -->
+<div id="qr-overlay" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(27,45,62,0.96);align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center;color:#fff;">
+  <div style="font-size:18px;font-weight:700;color:#7ec8f7;">📲 Partager VigieNid</div>
+  <div style="font-size:13px;color:#8fafc8;max-width:260px;line-height:1.6;">Faites scanner ce QR code par vos sentinelles pour qu'elles rejoignent votre secteur.</div>
+  <div id="qr-code" style="background:#fff;padding:16px;border-radius:12px;"></div>
+  <div id="qr-url" style="font-size:11px;color:#8fafc8;word-break:break-all;max-width:280px;"></div>
+  <button onclick="document.getElementById('qr-overlay').style.display='none'" style="padding:12px 32px;background:#2a7fc1;color:#fff;border:none;border-radius:99px;font-size:15px;font-weight:600;cursor:pointer;">Fermer</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <!-- permission boussole iOS -->
 <div id="perm-overlay">
@@ -465,6 +474,18 @@ async function init() {
   } catch(e) {
     pseudoName = phoneId.slice(0, 10);
   }
+
+  // Détecter si pilote/admin → afficher bouton Partager
+  try {
+    const { data: ap } = await sb
+      .from('admin_profiles')
+      .select('id, role')
+      .eq('phone_id', phoneId)
+      .maybeSingle();
+    if (ap && ['pilot','admin_dept','superadmin'].includes(ap.role)) {
+      document.getElementById('btn-share').style.display = 'block';
+    }
+  } catch(e) { /* pas pilote */ }
 
   // Remplir header
   document.getElementById('hdr-admin').textContent      = pilotData.admin_nom;
@@ -726,6 +747,28 @@ function drawFuseau(lat, lon, az, lenM, color) {
   return L.polygon([o, l, t, r, o], {
     color, fillColor: color, fillOpacity: 0.4, weight: 1.5, opacity: 0.85
   });
+}
+
+// ════════════════════════════════════════════
+//  QR CODE PARTAGE
+// ════════════════════════════════════════════
+let qrGenerated = false;
+function showQR() {
+  const overlay = document.getElementById('qr-overlay');
+  overlay.style.display = 'flex';
+  if (!qrGenerated) {
+    const url = `${location.origin}${location.pathname}?pilot=${pilotData.pilot_id}`;
+    document.getElementById('qr-url').textContent = url;
+    new QRCode(document.getElementById('qr-code'), {
+      text: url,
+      width: 200,
+      height: 200,
+      colorDark: '#1b2d3e',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    qrGenerated = true;
+  }
 }
 
 // ════════════════════════════════════════════
