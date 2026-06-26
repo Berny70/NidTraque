@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a2e1a">
+<title>NidTraque</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --bg:       #0f1a0f;
+    --surface:  #1a2e1a;
+    --border:   #2d4a2d;
+    --accent:   #6dbf67;
+    --accent2:  #f5a623;
+    --danger:   #e05252;
+    --text:     #e8f0e8;
+    --muted:    #7a9e7a;
+    --radius:   14px;
+    --font:     'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%; width: 100%;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ── ÉCRANS ── */
+  .screen { display: none; height: 100dvh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── SPLASH / INIT ── */
+  #screen-init {
+    align-items: center; justify-content: center; gap: 20px;
+    background: var(--bg);
+    padding: 32px;
+  }
+  .logo {
+    font-size: 52px; margin-bottom: 4px;
+    filter: drop-shadow(0 0 18px #6dbf6755);
+  }
+  .app-name {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+    color: var(--accent);
+  }
+  .app-sub { font-size: 14px; color: var(--muted); text-align: center; max-width: 240px; }
+  .init-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERREUR / INFO ── */
+  #screen-error {
+    align-items: center; justify-content: center; gap: 16px;
+    padding: 32px; text-align: center;
+  }
+  .err-icon { font-size: 48px; }
+  .err-title { font-size: 20px; font-weight: 600; }
+  .err-msg { font-size: 14px; color: var(--muted); max-width: 280px; line-height: 1.5; }
+  .btn-retry {
+    margin-top: 8px; padding: 12px 28px;
+    background: var(--accent); color: var(--bg);
+    border: none; border-radius: 99px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+
+  /* ── CARTE ── */
+  #screen-map { position: relative; }
+
+  #map { flex: 1; width: 100%; }
+
+  /* topbar */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 900;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(to bottom, rgba(15,26,15,0.92) 70%, transparent);
+    pointer-events: none;
+  }
+  .topbar-left { display: flex; flex-direction: column; pointer-events: auto; }
+  .topbar-title { font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: 0.3px; }
+  .topbar-pilot { font-size: 11px; color: var(--muted); }
+
+  /* boussole live */
+  .compass-wrap {
+    pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .compass-ring {
+    width: 52px; height: 52px; position: relative;
+  }
+  .compass-ring svg { width: 100%; height: 100%; }
+  .compass-deg {
+    font-size: 11px; font-weight: 600; color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+
+  /* bottom panel */
+  .bottom-panel {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 900;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(15,26,15,0.96) 60%, transparent);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  /* status bar */
+  .status-bar {
+    display: flex; gap: 10px; align-items: center;
+    font-size: 12px; color: var(--muted);
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
+  }
+  .status-dot.ok { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .status-dot.warn { background: var(--accent2); }
+  .status-dot.err { background: var(--danger); }
+
+  /* bouton signaler */
+  .btn-signal {
+    width: 100%;
+    padding: 18px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none; border-radius: var(--radius);
+    font-size: 17px; font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: transform 0.1s, opacity 0.1s;
+    -webkit-appearance: none;
+  }
+  .btn-signal:active { transform: scale(0.97); opacity: 0.85; }
+  .btn-signal:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-signal.sending { background: var(--border); color: var(--muted); }
+
+  /* toast */
+  .toast {
+    position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 99px; padding: 10px 20px;
+    font-size: 13px; font-weight: 500;
+    white-space: nowrap;
+    opacity: 0; transition: opacity 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  .toast.ok { border-color: var(--accent); color: var(--accent); }
+  .toast.err { border-color: var(--danger); color: var(--danger); }
+
+  /* popup leaflet custom */
+  .leaflet-popup-content-wrapper {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    color: var(--text) !important;
+  }
+  .leaflet-popup-tip { background: var(--surface) !important; }
+  .popup-inner { font-size: 13px; line-height: 1.7; }
+  .popup-inner strong { color: var(--accent); }
+
+  /* marqueur position */
+  .my-marker {
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(109,191,103,0.35);
+  }
+
+  /* permission overlay */
+  #perm-overlay {
+    display: none;
+    position: absolute; inset: 0; z-index: 1100;
+    background: rgba(15,26,15,0.92);
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    padding: 32px; text-align: center;
+  }
+  #perm-overlay.show { display: flex; }
+  .perm-icon { font-size: 48px; }
+  .perm-title { font-size: 18px; font-weight: 700; }
+  .perm-msg { font-size: 13px; color: var(--muted); max-width: 260px; line-height: 1.6; }
+  .btn-perm {
+    padding: 14px 32px;
+    background: var(--accent); color: var(--bg);
+    border: none; border-radius: 99px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── INIT ── -->
+<div id="screen-init" class="screen active">
+  <div class="logo">🐝</div>
+  <div class="app-name">NidTraque</div>
+  <div class="app-sub">Localisation de nids de frelons asiatiques</div>
+  <div class="spinner"></div>
+  <div class="init-status" id="init-status">Chargement…</div>
+</div>
+
+<!-- ── ERREUR ── -->
+<div id="screen-error" class="screen">
+  <div class="err-icon">⚠️</div>
+  <div class="err-title" id="err-title">Erreur</div>
+  <div class="err-msg" id="err-msg">Une erreur est survenue.</div>
+  <button class="btn-retry" onclick="location.reload()">Réessayer</button>
+</div>
+
+<!-- ── CARTE ── -->
+<div id="screen-map" class="screen">
+
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">🐝 NidTraque</div>
+      <div class="topbar-pilot" id="topbar-pilot">—</div>
+    </div>
+    <div class="compass-wrap">
+      <div class="compass-ring">
+        <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- ring -->
+          <circle cx="26" cy="26" r="24" stroke="#2d4a2d" stroke-width="2"/>
+          <!-- N S E W -->
+          <text x="26" y="9" text-anchor="middle" fill="#6dbf67" font-size="7" font-weight="700" font-family="sans-serif">N</text>
+          <text x="26" y="47" text-anchor="middle" fill="#7a9e7a" font-size="6" font-family="sans-serif">S</text>
+          <text x="47" y="28" text-anchor="middle" fill="#7a9e7a" font-size="6" font-family="sans-serif">E</text>
+          <text x="5"  y="28" text-anchor="middle" fill="#7a9e7a" font-size="6" font-family="sans-serif">O</text>
+          <!-- aiguille -->
+          <g id="needle" transform-origin="26 26">
+            <polygon points="26,8 23,26 29,26" fill="#6dbf67" opacity="0.95"/>
+            <polygon points="26,44 23,26 29,26" fill="#e05252" opacity="0.8"/>
+          </g>
+        </svg>
+      </div>
+      <div class="compass-deg" id="compass-deg">—°</div>
+    </div>
+  </div>
+
+  <!-- carte leaflet -->
+  <div id="map"></div>
+
+  <!-- bottom panel -->
+  <div class="bottom-panel">
+    <div class="status-bar">
+      <div class="status-dot" id="dot-gps"></div>
+      <span id="lbl-gps">GPS : attente…</span>
+      &nbsp;·&nbsp;
+      <div class="status-dot" id="dot-compass"></div>
+      <span id="lbl-compass">Boussole : attente…</span>
+    </div>
+    <button class="btn-signal" id="btn-signal" disabled onclick="doSignal()">
+      <span>📍</span><span>Signaler un frelon</span>
+    </button>
+  </div>
+
+  <!-- toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- permission overlay boussole iOS -->
+  <div id="perm-overlay">
+    <div class="perm-icon">🧭</div>
+    <div class="perm-title">Autoriser la boussole</div>
+    <div class="perm-msg">NidTraque a besoin d'accéder à l'orientation de votre téléphone pour enregistrer la direction de vol.</div>
+    <button class="btn-perm" id="btn-perm-compass">Autoriser</button>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════
+const SUPABASE_URL = 'https://pqozgsgytzntrqscevrt.supabase.co';
+const SUPABASE_ANON_KEY = 'REMPLACER_PAR_LA_CLE_ANON';
+
+const TRAIT_LENGTH_DEFAULT = 800; // mètres (override par pilote)
+const TRAIT_ANGLE = 15;           // demi-angle du fuseau (°)
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let sb = null;
+let pilotData = null;        // { pilot_id, pilot_nom, trait_length_m, validity_days }
+let phoneId = null;          // identifiant anonyme local
+let myPos = null;            // { lat, lon }
+let azimuth = null;          // degrés (0 = N)
+let compassGranted = false;
+let map = null;
+let myMarker = null;
+let signalLayers = [];       // fuseaux sur la carte
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+function showError(title, msg) {
+  document.getElementById('err-title').textContent = title;
+  document.getElementById('err-msg').textContent = msg;
+  showScreen('error');
+}
+
+function setInitStatus(msg) {
+  document.getElementById('init-status').textContent = msg;
+}
+
+let toastTimer = null;
+function showToast(msg, type = 'ok', duration = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', duration);
+}
+
+function getPhoneId() {
+  let id = localStorage.getItem('nidtraque_phone_id');
+  if (!id) {
+    id = 'nt_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    localStorage.setItem('nidtraque_phone_id', id);
+  }
+  return id;
+}
+
+// ══════════════════════════════════════════════
+//  LECTURE QR CODE / URL
+//  Format attendu : ?pilot=<pilot_id>
+// ══════════════════════════════════════════════
+function getPilotIdFromURL() {
+  const p = new URLSearchParams(location.search);
+  return p.get('pilot') || null;
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+async function init() {
+  setInitStatus('Connexion…');
+
+  // Supabase
+  try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch(e) {
+    showError('Connexion impossible', 'Impossible de joindre le serveur. Vérifiez votre connexion.');
+    return;
+  }
+
+  // Pilot ID via URL ou cache local
+  const pilotId = getPilotIdFromURL() || localStorage.getItem('nidtraque_pilot_id');
+  if (!pilotId) {
+    showError('QR code requis', 'Scannez le QR code de votre pilote de secteur pour accéder à NidTraque.');
+    return;
+  }
+
+  // Sauvegarder pour les prochaines ouvertures
+  if (getPilotIdFromURL()) {
+    localStorage.setItem('nidtraque_pilot_id', pilotId);
+  }
+
+  phoneId = getPhoneId();
+
+  setInitStatus('Chargement du secteur…');
+
+  // Charger infos pilote depuis Supabase
+  try {
+    const { data, error } = await sb
+      .from('admin_profiles')
+      .select('id, nom, prenom, secteur, trait_length_m, validity_days')
+      .eq('id', pilotId)
+      .single();
+
+    if (error || !data) throw new Error(error?.message || 'Pilote introuvable');
+
+    pilotData = {
+      pilot_id: data.id,
+      pilot_nom: `${data.prenom || ''} ${data.nom || ''}`.trim() || data.secteur || 'Pilote',
+      secteur: data.secteur || '',
+      trait_length_m: data.trait_length_m || TRAIT_LENGTH_DEFAULT,
+      validity_days: data.validity_days || 7,
+    };
+  } catch(e) {
+    showError('Pilote introuvable', `Impossible de charger les données du secteur. (${e.message})`);
+    return;
+  }
+
+  setInitStatus('Prêt');
+  startMap();
+}
+
+// ══════════════════════════════════════════════
+//  CARTE
+// ══════════════════════════════════════════════
+function startMap() {
+  showScreen('map');
+  document.getElementById('topbar-pilot').textContent =
+    `${pilotData.secteur ? pilotData.secteur + ' · ' : ''}${pilotData.pilot_nom}`;
+
+  // Init Leaflet
+  map = L.map('map', {
+    center: [45.5, 5.5],
+    zoom: 14,
+    zoomControl: false,
+    attributionControl: true,
+  });
+
+  // Fond IGN via Géoportail (WMTS public)
+  L.tileLayer('https://wxs.ign.fr/essentiels/geoportail/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+    maxZoom: 19,
+    attribution: '© IGN',
+    crossOrigin: true,
+  }).on('tileerror', () => {
+    // fallback OSM si IGN indisponible
+  }).addTo(map);
+
+  // Fallback OSM en dessous
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OSM',
+    opacity: 0,
+    zIndex: 0,
+  }).addTo(map);
+
+  // Contrôle zoom en bas à droite (pas masqué par bottom panel)
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  // GPS
+  startGPS();
+
+  // Boussole
+  startCompass();
+
+  // Charger signalements existants
+  loadSignals();
+}
+
+// ══════════════════════════════════════════════
+//  GPS
+// ══════════════════════════════════════════════
+function startGPS() {
+  if (!navigator.geolocation) {
+    updateStatus('gps', 'err', 'GPS non supporté');
+    return;
+  }
+
+  navigator.geolocation.watchPosition(
+    pos => {
+      myPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      updateStatus('gps', 'ok', `GPS ·  ±${Math.round(pos.coords.accuracy)}m`);
+      updateMapPosition();
+      checkReady();
+    },
+    err => {
+      updateStatus('gps', 'err', 'GPS refusé');
+    },
+    { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+  );
+}
+
+function updateMapPosition() {
+  if (!myPos || !map) return;
+  const ll = [myPos.lat, myPos.lon];
+  if (!myMarker) {
+    const icon = L.divIcon({ className: '', html: '<div class="my-marker"></div>', iconSize: [16,16], iconAnchor: [8,8] });
+    myMarker = L.marker(ll, { icon, zIndexOffset: 1000 }).addTo(map);
+    map.setView(ll, 15);
+  } else {
+    myMarker.setLatLng(ll);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  BOUSSOLE
+// ══════════════════════════════════════════════
+function startCompass() {
+  // iOS 13+ — DeviceOrientationEvent.requestPermission()
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    document.getElementById('perm-overlay').classList.add('show');
+    document.getElementById('btn-perm-compass').addEventListener('click', async () => {
+      try {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm === 'granted') {
+          document.getElementById('perm-overlay').classList.remove('show');
+          bindCompass();
+        } else {
+          updateStatus('compass', 'err', 'Boussole refusée');
+          document.getElementById('perm-overlay').classList.remove('show');
+        }
+      } catch(e) {
+        updateStatus('compass', 'err', 'Boussole indisponible');
+        document.getElementById('perm-overlay').classList.remove('show');
+      }
+    });
+  } else {
+    // Android / desktop
+    bindCompass();
+  }
+}
+
+function bindCompass() {
+  window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+  window.addEventListener('deviceorientation', handleOrientation, true);
+}
+
+function handleOrientation(e) {
+  let deg = null;
+
+  if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
+    // iOS
+    deg = e.webkitCompassHeading;
+  } else if (e.absolute && e.alpha !== null) {
+    // Android absolu
+    deg = (360 - e.alpha) % 360;
+  } else if (e.alpha !== null) {
+    // Fallback non-absolu
+    deg = (360 - e.alpha) % 360;
+  }
+
+  if (deg === null) return;
+
+  azimuth = Math.round(deg);
+  compassGranted = true;
+
+  // Rotate needle
+  const needle = document.getElementById('needle');
+  if (needle) needle.setAttribute('transform', `rotate(${azimuth}, 26, 26)`);
+  document.getElementById('compass-deg').textContent = azimuth + '°';
+  updateStatus('compass', 'ok', `Boussole · ${azimuth}°`);
+  checkReady();
+}
+
+// ══════════════════════════════════════════════
+//  STATUS
+// ══════════════════════════════════════════════
+function updateStatus(type, state, label) {
+  const dot = document.getElementById('dot-' + type);
+  const lbl = document.getElementById('lbl-' + type);
+  dot.className = 'status-dot ' + state;
+  lbl.textContent = label;
+}
+
+function checkReady() {
+  const btn = document.getElementById('btn-signal');
+  if (myPos && azimuth !== null) {
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════
+//  SIGNALER
+// ══════════════════════════════════════════════
+async function doSignal() {
+  if (!myPos || azimuth === null) return;
+
+  const btn = document.getElementById('btn-signal');
+  btn.disabled = true;
+  btn.classList.add('sending');
+  btn.innerHTML = '<span>⏳</span><span>Envoi…</span>';
+
+  const payload = {
+    phone_id: phoneId,
+    pilot_id: pilotData.pilot_id,
+    lat: myPos.lat,
+    lon: myPos.lon,
+    azimuth: azimuth,
+    created_at: new Date().toISOString(),
+  };
+
+  try {
+    // Insertion dans la table signals (même table que Pot à Mèche)
+    const { error } = await sb.from('signals').insert([payload]);
+    if (error) throw new Error(error.message);
+
+    showToast('✅ Signalement enregistré', 'ok');
+    // Afficher localement immédiatement
+    drawFuseau(myPos.lat, myPos.lon, azimuth, pilotData.trait_length_m, true);
+  } catch(e) {
+    showToast('❌ Erreur : ' + e.message, 'err', 4000);
+  }
+
+  btn.disabled = false;
+  btn.classList.remove('sending');
+  btn.innerHTML = '<span>📍</span><span>Signaler un frelon</span>';
+}
+
+// ══════════════════════════════════════════════
+//  FUSEAUX
+// ══════════════════════════════════════════════
+function degToRad(d) { return d * Math.PI / 180; }
+
+function destinationPoint(lat, lon, bearing, distM) {
+  const R = 6371000;
+  const d = distM / R;
+  const b = degToRad(bearing);
+  const lat1 = degToRad(lat);
+  const lon1 = degToRad(lon);
+  const lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(b));
+  const lon2 = lon1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(lat1), Math.cos(d)-Math.sin(lat1)*Math.sin(lat2));
+  return [lat2 * 180/Math.PI, lon2 * 180/Math.PI];
+}
+
+function drawFuseau(lat, lon, az, lengthM, isMine = false) {
+  const origin = [lat, lon];
+  const left  = destinationPoint(lat, lon, az - TRAIT_ANGLE, lengthM);
+  const right = destinationPoint(lat, lon, az + TRAIT_ANGLE, lengthM);
+  const tip   = destinationPoint(lat, lon, az, lengthM);
+
+  const color = isMine ? '#6dbf67' : '#f5a623';
+  const opacity = isMine ? 0.55 : 0.35;
+
+  const poly = L.polygon([origin, left, tip, right, origin], {
+    color: color,
+    fillColor: color,
+    fillOpacity: opacity,
+    weight: 1.5,
+    opacity: 0.8,
+  }).addTo(map);
+
+  signalLayers.push(poly);
+}
+
+// ══════════════════════════════════════════════
+//  CHARGER SIGNALEMENTS EXISTANTS
+// ══════════════════════════════════════════════
+async function loadSignals() {
+  try {
+    // Validité : on filtre côté client (validity_days du pilote)
+    const since = new Date();
+    since.setDate(since.getDate() - (pilotData.validity_days || 7));
+
+    const { data, error } = await sb
+      .from('signals')
+      .select('lat, lon, azimuth, phone_id, created_at')
+      .eq('pilot_id', pilotData.pilot_id)
+      .gte('created_at', since.toISOString());
+
+    if (error) throw error;
+    if (!data) return;
+
+    data.forEach(s => {
+      const isMine = s.phone_id === phoneId;
+      drawFuseau(s.lat, s.lon, s.azimuth, pilotData.trait_length_m, isMine);
+    });
+  } catch(e) {
+    console.warn('loadSignals error:', e.message);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  DÉMARRAGE
+// ══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
