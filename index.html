@@ -5,672 +5,720 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1a2e1a">
+<meta name="theme-color" content="#1b2d3e">
 <title>NidTraque</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-  :root {
-    --bg:       #0f1a0f;
-    --surface:  #1a2e1a;
-    --border:   #2d4a2d;
-    --accent:   #6dbf67;
-    --accent2:  #f5a623;
-    --danger:   #e05252;
-    --text:     #e8f0e8;
-    --muted:    #7a9e7a;
-    --radius:   14px;
-    --font:     'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
+:root {
+  --bg:      #1b2d3e;
+  --card:    #f0f4f8;
+  --white:   #ffffff;
+  --navy:    #1b2d3e;
+  --accent:  #2a7fc1;
+  --green:   #2e7d32;
+  --red:     #c0392b;
+  --yellow:  #f5a623;
+  --text:    #1a1a2e;
+  --muted:   #6b7c93;
+  --border:  #d0dce8;
+  --radius:  10px;
+  --font:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; font-family: var(--font); background: var(--bg); overflow: hidden; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* ── SCREENS ── */
+.screen { display: none; height: 100dvh; }
+.screen.active { display: flex; flex-direction: column; }
 
-  html, body {
-    height: 100%; width: 100%;
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    overflow: hidden;
-  }
+/* ── INIT ── */
+#screen-init {
+  align-items: center; justify-content: center; gap: 18px;
+  background: var(--navy); color: #fff; padding: 32px; text-align: center;
+}
+.init-logo { font-size: 56px; }
+.init-title { font-size: 26px; font-weight: 700; color: #7ec8f7; }
+.init-sub { font-size: 13px; color: #8fafc8; }
+.spinner { width: 34px; height: 34px; border: 3px solid #2a4a6a; border-top-color: #7ec8f7; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.init-status { font-size: 13px; color: #8fafc8; }
 
-  /* ── ÉCRANS ── */
-  .screen { display: none; height: 100dvh; flex-direction: column; }
-  .screen.active { display: flex; }
+/* ── ERROR ── */
+#screen-error {
+  align-items: center; justify-content: center; gap: 16px;
+  background: var(--navy); color: #fff; padding: 32px; text-align: center;
+}
+.err-icon { font-size: 48px; }
+.err-title { font-size: 20px; font-weight: 700; }
+.err-msg { font-size: 14px; color: #8fafc8; max-width: 280px; line-height: 1.6; }
+.btn-retry { margin-top: 8px; padding: 12px 28px; background: #2a7fc1; color: #fff; border: none; border-radius: 99px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
-  /* ── SPLASH / INIT ── */
-  #screen-init {
-    align-items: center; justify-content: center; gap: 20px;
-    background: var(--bg);
-    padding: 32px;
-  }
-  .logo {
-    font-size: 52px; margin-bottom: 4px;
-    filter: drop-shadow(0 0 18px #6dbf6755);
-  }
-  .app-name {
-    font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
-    color: var(--accent);
-  }
-  .app-sub { font-size: 14px; color: var(--muted); text-align: center; max-width: 240px; }
-  .init-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
-  .spinner {
-    width: 32px; height: 32px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── PSEUDO SCREEN ── */
+#screen-pseudo {
+  align-items: center; justify-content: center; gap: 20px;
+  background: var(--navy); color: #fff; padding: 32px; text-align: center;
+}
+#screen-pseudo .ps-icon { font-size: 48px; }
+#screen-pseudo .ps-title { font-size: 20px; font-weight: 700; color: #7ec8f7; }
+#screen-pseudo .ps-msg { font-size: 13px; color: #8fafc8; max-width: 260px; line-height: 1.6; }
+#screen-pseudo input {
+  width: 100%; max-width: 280px;
+  padding: 14px 16px; border-radius: var(--radius);
+  border: 2px solid #2a4a6a; background: #0f1e2e; color: #fff;
+  font-size: 16px; text-align: center; outline: none;
+}
+#screen-pseudo input:focus { border-color: #2a7fc1; }
+#screen-pseudo .btn-ok {
+  width: 100%; max-width: 280px; padding: 14px;
+  background: #2a7fc1; color: #fff; border: none; border-radius: var(--radius);
+  font-size: 16px; font-weight: 700; cursor: pointer;
+}
 
-  /* ── ERREUR / INFO ── */
-  #screen-error {
-    align-items: center; justify-content: center; gap: 16px;
-    padding: 32px; text-align: center;
-  }
-  .err-icon { font-size: 48px; }
-  .err-title { font-size: 20px; font-weight: 600; }
-  .err-msg { font-size: 14px; color: var(--muted); max-width: 280px; line-height: 1.5; }
-  .btn-retry {
-    margin-top: 8px; padding: 12px 28px;
-    background: var(--accent); color: var(--bg);
-    border: none; border-radius: 99px;
-    font-size: 15px; font-weight: 600; cursor: pointer;
-  }
+/* ── MAIN SCREEN ── */
+#screen-main { background: var(--card); }
 
-  /* ── CARTE ── */
-  #screen-map { position: relative; }
+/* header */
+.header {
+  background: var(--navy); color: #fff;
+  padding: 10px 16px 8px;
+  flex-shrink: 0;
+}
+.header-title {
+  text-align: center; font-size: 22px; font-weight: 700; color: #7ec8f7;
+  letter-spacing: 0.5px; margin-bottom: 8px;
+}
+.header-version { font-size: 10px; color: #4a7090; float: right; margin-top: -22px; }
+.header-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 13px; }
+.header-label { color: #8fafc8; font-weight: 500; white-space: nowrap; }
+.header-value { color: #fff; font-weight: 600; }
+.header-value.territory { color: #7ec8f7; }
+.header-value.pilot    { color: #7ec8f7; }
+.header-value.sentinel { color: #6dbf67; }
 
-  #map { flex: 1; width: 100%; }
+/* section title */
+.section-title {
+  background: #d8e4f0; text-align: center;
+  font-size: 14px; font-weight: 600; color: var(--navy);
+  padding: 7px; border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
 
-  /* topbar */
-  .topbar {
-    position: absolute; top: 0; left: 0; right: 0; z-index: 900;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px;
-    background: linear-gradient(to bottom, rgba(15,26,15,0.92) 70%, transparent);
-    pointer-events: none;
-  }
-  .topbar-left { display: flex; flex-direction: column; pointer-events: auto; }
-  .topbar-title { font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: 0.3px; }
-  .topbar-pilot { font-size: 11px; color: var(--muted); }
+/* corps central */
+.main-body {
+  flex: 1; display: flex; flex-direction: column;
+  padding: 12px 16px; gap: 12px; overflow-y: auto;
+  background: var(--card);
+}
 
-  /* boussole live */
-  .compass-wrap {
-    pointer-events: none;
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-  }
-  .compass-ring {
-    width: 52px; height: 52px; position: relative;
-  }
-  .compass-ring svg { width: 100%; height: 100%; }
-  .compass-deg {
-    font-size: 11px; font-weight: 600; color: var(--accent);
-    letter-spacing: 0.5px;
-  }
+/* rangée boussole + position */
+.row-compass {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
 
-  /* bottom panel */
-  .bottom-panel {
-    position: absolute; bottom: 0; left: 0; right: 0; z-index: 900;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
-    background: linear-gradient(to top, rgba(15,26,15,0.96) 60%, transparent);
-    display: flex; flex-direction: column; gap: 12px;
-  }
+/* blocs position & boussole */
+.bloc-info {
+  flex: 1; background: #fff; border: 2px solid var(--border);
+  border-radius: var(--radius); padding: 10px 12px;
+}
+.bloc-info .bloc-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.bloc-info .coord { font-size: 13px; font-weight: 700; color: var(--accent); line-height: 1.6; }
+.bloc-info .dir   { font-size: 15px; font-weight: 800; color: var(--red); }
 
-  /* status bar */
-  .status-bar {
-    display: flex; gap: 10px; align-items: center;
-    font-size: 12px; color: var(--muted);
-  }
-  .status-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--muted); flex-shrink: 0;
-  }
-  .status-dot.ok { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-  .status-dot.warn { background: var(--accent2); }
-  .status-dot.err { background: var(--danger); }
+/* boutons Position / Boussole */
+.btn-gps, .btn-compass-lock {
+  width: 100%; padding: 9px 6px; border: none; border-radius: 6px;
+  font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 8px;
+}
+.btn-gps           { background: var(--yellow); color: #fff; }
+.btn-compass-lock  { background: var(--accent);  color: #fff; }
+.btn-gps.locked    { background: var(--green); }
+.btn-compass-lock.locked { background: var(--green); }
 
-  /* bouton signaler */
-  .btn-signal {
-    width: 100%;
-    padding: 18px;
-    background: var(--accent);
-    color: var(--bg);
-    border: none; border-radius: var(--radius);
-    font-size: 17px; font-weight: 700;
-    letter-spacing: 0.2px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    transition: transform 0.1s, opacity 0.1s;
-    -webkit-appearance: none;
-  }
-  .btn-signal:active { transform: scale(0.97); opacity: 0.85; }
-  .btn-signal:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-signal.sending { background: var(--border); color: var(--muted); }
+/* flèche centrale */
+.arrow-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  flex-shrink: 0;
+}
+.arrow-svg { transition: transform 0.15s ease; }
+.arrow-deg { font-size: 11px; color: var(--muted); font-weight: 600; }
 
-  /* toast */
-  .toast {
-    position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-    z-index: 1000;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 99px; padding: 10px 20px;
-    font-size: 13px; font-weight: 500;
-    white-space: nowrap;
-    opacity: 0; transition: opacity 0.25s;
-    pointer-events: none;
-  }
-  .toast.show { opacity: 1; }
-  .toast.ok { border-color: var(--accent); color: var(--accent); }
-  .toast.err { border-color: var(--danger); color: var(--danger); }
+/* bouton enregistrer */
+.btn-enregister {
+  width: 100%; padding: 16px;
+  background: var(--navy); color: #fff;
+  border: none; border-radius: var(--radius);
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  line-height: 1.4; text-align: center;
+  transition: opacity 0.15s;
+}
+.btn-enregister:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-enregister:not(:disabled):active { opacity: 0.75; }
 
-  /* popup leaflet custom */
-  .leaflet-popup-content-wrapper {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius) !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
-    color: var(--text) !important;
-  }
-  .leaflet-popup-tip { background: var(--surface) !important; }
-  .popup-inner { font-size: 13px; line-height: 1.7; }
-  .popup-inner strong { color: var(--accent); }
+/* boutons secondaires */
+.row-btns { display: flex; gap: 10px; }
+.btn-sec {
+  flex: 1; padding: 13px 8px;
+  border: 2px solid var(--navy); border-radius: var(--radius);
+  background: #fff; color: var(--navy);
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  text-align: center; line-height: 1.4;
+}
+.btn-sec:active { background: #e8f0f8; }
+.btn-sec.danger { border-color: var(--red); color: var(--red); }
+.btn-sec.danger:active { background: #fdecea; }
 
-  /* marqueur position */
-  .my-marker {
-    width: 16px; height: 16px;
-    background: var(--accent);
-    border: 3px solid #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px rgba(109,191,103,0.35);
-  }
+/* toast */
+.toast {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  z-index: 2000;
+  background: rgba(27,45,62,0.95); color: #fff;
+  border-radius: var(--radius); padding: 14px 24px;
+  font-size: 15px; font-weight: 600; text-align: center;
+  pointer-events: none; opacity: 0; transition: opacity 0.2s;
+  min-width: 200px;
+}
+.toast.show { opacity: 1; }
+.toast.ok   { border: 2px solid #6dbf67; }
+.toast.err  { border: 2px solid var(--red); }
 
-  /* permission overlay */
-  #perm-overlay {
-    display: none;
-    position: absolute; inset: 0; z-index: 1100;
-    background: rgba(15,26,15,0.92);
-    align-items: center; justify-content: center;
-    flex-direction: column; gap: 20px;
-    padding: 32px; text-align: center;
-  }
-  #perm-overlay.show { display: flex; }
-  .perm-icon { font-size: 48px; }
-  .perm-title { font-size: 18px; font-weight: 700; }
-  .perm-msg { font-size: 13px; color: var(--muted); max-width: 260px; line-height: 1.6; }
-  .btn-perm {
-    padding: 14px 32px;
-    background: var(--accent); color: var(--bg);
-    border: none; border-radius: 99px;
-    font-size: 15px; font-weight: 600; cursor: pointer;
-  }
+/* ── MAP SCREEN ── */
+#screen-map { background: #000; }
+#screen-map .map-header {
+  background: var(--navy); color: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; flex-shrink: 0;
+}
+#screen-map .map-header span { font-size: 15px; font-weight: 700; color: #7ec8f7; }
+#screen-map .btn-back {
+  padding: 8px 18px; background: #2a7fc1; color: #fff;
+  border: none; border-radius: 99px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+#map { flex: 1; }
+
+/* leaflet popup */
+.leaflet-popup-content-wrapper {
+  background: var(--navy) !important; border: 1px solid #2a4a6a !important;
+  border-radius: var(--radius) !important; color: #fff !important;
+}
+.leaflet-popup-tip { background: var(--navy) !important; }
+
+/* perm overlay */
+#perm-overlay {
+  display: none; position: fixed; inset: 0; z-index: 3000;
+  background: rgba(27,45,62,0.95);
+  align-items: center; justify-content: center; flex-direction: column; gap: 20px;
+  padding: 32px; text-align: center; color: #fff;
+}
+#perm-overlay.show { display: flex; }
+#perm-overlay .perm-icon { font-size: 48px; }
+#perm-overlay .perm-title { font-size: 18px; font-weight: 700; color: #7ec8f7; }
+#perm-overlay .perm-msg { font-size: 13px; color: #8fafc8; max-width: 260px; line-height: 1.6; }
+#perm-overlay .btn-perm {
+  padding: 14px 32px; background: #2a7fc1; color: #fff;
+  border: none; border-radius: 99px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
 </style>
 </head>
 <body>
 
-<!-- ── INIT ── -->
+<!-- ══ INIT ══ -->
 <div id="screen-init" class="screen active">
-  <div class="logo">🐝</div>
-  <div class="app-name">NidTraque</div>
-  <div class="app-sub">Localisation de nids de frelons asiatiques</div>
+  <div class="init-logo">🐝</div>
+  <div class="init-title">NidTraque</div>
+  <div class="init-sub">Localisation collaborative de nids</div>
   <div class="spinner"></div>
   <div class="init-status" id="init-status">Chargement…</div>
 </div>
 
-<!-- ── ERREUR ── -->
+<!-- ══ ERROR ══ -->
 <div id="screen-error" class="screen">
   <div class="err-icon">⚠️</div>
   <div class="err-title" id="err-title">Erreur</div>
-  <div class="err-msg" id="err-msg">Une erreur est survenue.</div>
+  <div class="err-msg" id="err-msg"></div>
   <button class="btn-retry" onclick="location.reload()">Réessayer</button>
 </div>
 
-<!-- ── CARTE ── -->
-<div id="screen-map" class="screen">
+<!-- ══ MAIN ══ -->
+<div id="screen-main" class="screen">
 
-  <!-- topbar -->
-  <div class="topbar">
-    <div class="topbar-left">
-      <div class="topbar-title">🐝 NidTraque</div>
-      <div class="topbar-pilot" id="topbar-pilot">—</div>
+  <!-- header -->
+  <div class="header">
+    <div class="header-title">VigieNid <span class="header-version">V 1.0</span></div>
+    <div class="header-grid">
+      <div class="header-label">Admin.</div>
+      <div class="header-value" id="hdr-admin">—</div>
+      <div class="header-label">Territoire</div>
+      <div class="header-value territory" id="hdr-territoire">—</div>
+      <div class="header-label">Pilote</div>
+      <div class="header-value pilot" id="hdr-pilote">—</div>
+      <div class="header-label">Sentinelle</div>
+      <div class="header-value sentinel" id="hdr-sentinel">—</div>
     </div>
-    <div class="compass-wrap">
-      <div class="compass-ring">
-        <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- ring -->
-          <circle cx="26" cy="26" r="24" stroke="#2d4a2d" stroke-width="2"/>
-          <!-- N S E W -->
-          <text x="26" y="9" text-anchor="middle" fill="#6dbf67" font-size="7" font-weight="700" font-family="sans-serif">N</text>
-          <text x="26" y="47" text-anchor="middle" fill="#7a9e7a" font-size="6" font-family="sans-serif">S</text>
-          <text x="47" y="28" text-anchor="middle" fill="#7a9e7a" font-size="6" font-family="sans-serif">E</text>
-          <text x="5"  y="28" text-anchor="middle" fill="#7a9e7a" font-size="6" font-family="sans-serif">O</text>
-          <!-- aiguille -->
-          <g id="needle" transform-origin="26 26">
-            <polygon points="26,8 23,26 29,26" fill="#6dbf67" opacity="0.95"/>
-            <polygon points="26,44 23,26 29,26" fill="#e05252" opacity="0.8"/>
-          </g>
-        </svg>
+  </div>
+
+  <div class="section-title">Mon observation</div>
+
+  <!-- corps -->
+  <div class="main-body">
+
+    <!-- rangée position / flèche / boussole -->
+    <div class="row-compass">
+
+      <!-- bloc position -->
+      <div class="bloc-info">
+        <div class="bloc-label">📍 Position GPS</div>
+        <div class="coord" id="disp-lat">Lat: —</div>
+        <div class="coord" id="disp-lon">Long: —</div>
+        <button class="btn-gps" id="btn-gps" onclick="lockGPS()">Position</button>
       </div>
-      <div class="compass-deg" id="compass-deg">—°</div>
-    </div>
-  </div>
 
-  <!-- carte leaflet -->
-  <div id="map"></div>
+      <!-- flèche centrale -->
+      <div class="arrow-wrap">
+        <svg class="arrow-svg" id="arrow-svg" width="60" height="90" viewBox="0 0 60 90">
+          <!-- corps flèche -->
+          <polygon points="30,5 52,65 30,52 8,65" fill="#c0392b" stroke="#8b0000" stroke-width="1.5"/>
+          <polygon points="30,52 8,65 30,85 52,65" fill="#8b0000" opacity="0.6"/>
+        </svg>
+        <div class="arrow-deg" id="arrow-deg">—°</div>
+      </div>
 
-  <!-- bottom panel -->
-  <div class="bottom-panel">
-    <div class="status-bar">
-      <div class="status-dot" id="dot-gps"></div>
-      <span id="lbl-gps">GPS : attente…</span>
-      &nbsp;·&nbsp;
-      <div class="status-dot" id="dot-compass"></div>
-      <span id="lbl-compass">Boussole : attente…</span>
+      <!-- bloc boussole -->
+      <div class="bloc-info">
+        <div class="bloc-label">🧭 Direction</div>
+        <div class="dir" id="disp-dir">Dir: —</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="disp-dir-sub">en attente…</div>
+        <button class="btn-compass-lock" id="btn-compass" onclick="lockCompass()">Boussole</button>
+      </div>
+
     </div>
-    <button class="btn-signal" id="btn-signal" disabled onclick="doSignal()">
-      <span>📍</span><span>Signaler un frelon</span>
+
+    <!-- bouton enregistrer -->
+    <button class="btn-enregister" id="btn-enregister" disabled onclick="doSignal()">
+      Enregistrer<br>la direction carte partagée
     </button>
+
+    <!-- boutons secondaires -->
+    <div class="row-btns">
+      <button class="btn-sec" onclick="showMap()">Visualiser mes<br>signalements</button>
+      <button class="btn-sec danger" onclick="cancelLast()">Annuler<br>dernière signalisation</button>
+    </div>
+
   </div>
+</div>
 
-  <!-- toast -->
-  <div class="toast" id="toast"></div>
-
-  <!-- permission overlay boussole iOS -->
-  <div id="perm-overlay">
-    <div class="perm-icon">🧭</div>
-    <div class="perm-title">Autoriser la boussole</div>
-    <div class="perm-msg">NidTraque a besoin d'accéder à l'orientation de votre téléphone pour enregistrer la direction de vol.</div>
-    <button class="btn-perm" id="btn-perm-compass">Autoriser</button>
+<!-- ══ MAP ══ -->
+<div id="screen-map" class="screen">
+  <div class="map-header">
+    <span>🗺️ Signalements</span>
+    <button class="btn-back" onclick="showScreen('main')">← Retour</button>
   </div>
+  <div id="map"></div>
+</div>
 
+<!-- toast -->
+<div class="toast" id="toast"></div>
+
+<!-- permission boussole iOS -->
+<div id="perm-overlay">
+  <div class="perm-icon">🧭</div>
+  <div class="perm-title">Autoriser la boussole</div>
+  <div class="perm-msg">VigieNid a besoin d'accéder à l'orientation de votre téléphone pour enregistrer la direction de vol du frelon.</div>
+  <button class="btn-perm" id="btn-perm-compass">Autoriser</button>
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-//  CONFIG
-// ══════════════════════════════════════════════
-const SUPABASE_URL = 'https://pqozgsgytzntrqscevrt.supabase.co';
+// ════════════════════════════════════════════
+//  CONFIG — remplacer SUPABASE_ANON_KEY
+// ════════════════════════════════════════════
+const SUPABASE_URL      = 'https://pqozgsgytzntrqscevrt.supabase.co';
 const SUPABASE_ANON_KEY = 'REMPLACER_PAR_LA_CLE_ANON';
+const TRAIT_ANGLE       = 15;   // demi-angle fuseau (°)
+const TRAIT_LENGTH_DEF  = 800;  // mètres par défaut
 
-const TRAIT_LENGTH_DEFAULT = 800; // mètres (override par pilote)
-const TRAIT_ANGLE = 15;           // demi-angle du fuseau (°)
-
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 //  STATE
-// ══════════════════════════════════════════════
-let sb = null;
-let pilotData = null;        // { pilot_id, pilot_nom, trait_length_m, validity_days }
-let phoneId = null;          // identifiant anonyme local
-let myPos = null;            // { lat, lon }
-let azimuth = null;          // degrés (0 = N)
-let compassGranted = false;
-let map = null;
-let myMarker = null;
-let signalLayers = [];       // fuseaux sur la carte
+// ════════════════════════════════════════════
+let sb         = null;
+let pilotData  = null;
+let phoneId    = null;
+let pseudoName = null;
 
-// ══════════════════════════════════════════════
+let liveAzimuth  = null;   // boussole en temps réel
+let lockedAzimuth= null;   // verrouillé par btn Boussole
+let livePos      = null;   // GPS temps réel {lat,lon}
+let lockedPos    = null;   // verrouillé par btn Position
+
+let map          = null;
+let mapInited    = false;
+let lastSignalId = null;   // pour annuler
+
+// ════════════════════════════════════════════
 //  UTILS
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
+  if (id === 'map') initMap();
 }
+
+function setInitStatus(msg) { document.getElementById('init-status').textContent = msg; }
 
 function showError(title, msg) {
   document.getElementById('err-title').textContent = title;
-  document.getElementById('err-msg').textContent = msg;
+  document.getElementById('err-msg').textContent   = msg;
   showScreen('error');
 }
 
-function setInitStatus(msg) {
-  document.getElementById('init-status').textContent = msg;
-}
-
 let toastTimer = null;
-function showToast(msg, type = 'ok', duration = 2800) {
+function showToast(msg, type='ok', ms=2800) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show ' + type;
+  t.textContent  = msg;
+  t.className    = 'toast show ' + type;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.className = 'toast', duration);
+  toastTimer = setTimeout(() => t.className = 'toast', ms);
 }
 
 function getPhoneId() {
   let id = localStorage.getItem('nidtraque_phone_id');
   if (!id) {
-    id = 'nt_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    id = 'nt_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
     localStorage.setItem('nidtraque_phone_id', id);
   }
   return id;
 }
 
-// ══════════════════════════════════════════════
-//  LECTURE QR CODE / URL
-//  Format attendu : ?pilot=<pilot_id>
-// ══════════════════════════════════════════════
 function getPilotIdFromURL() {
-  const p = new URLSearchParams(location.search);
-  return p.get('pilot') || null;
+  return new URLSearchParams(location.search).get('pilot') || null;
 }
 
-// ══════════════════════════════════════════════
+function checkReady() {
+  const ok = lockedPos && lockedAzimuth !== null;
+  document.getElementById('btn-enregister').disabled = !ok;
+}
+
+// ════════════════════════════════════════════
 //  INIT
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 async function init() {
-  setInitStatus('Connexion…');
+  setInitStatus('Connexion au serveur…');
 
-  // Supabase
-  try {
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } catch(e) {
-    showError('Connexion impossible', 'Impossible de joindre le serveur. Vérifiez votre connexion.');
-    return;
-  }
+  try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+  catch(e) { showError('Connexion impossible', 'Vérifiez votre connexion internet.'); return; }
 
-  // Pilot ID via URL ou cache local
   const pilotId = getPilotIdFromURL() || localStorage.getItem('nidtraque_pilot_id');
   if (!pilotId) {
-    showError('QR code requis', 'Scannez le QR code de votre pilote de secteur pour accéder à NidTraque.');
+    showError('QR code requis', 'Scannez le QR code fourni par votre pilote de secteur pour accéder à VigieNid.');
     return;
   }
-
-  // Sauvegarder pour les prochaines ouvertures
-  if (getPilotIdFromURL()) {
-    localStorage.setItem('nidtraque_pilot_id', pilotId);
-  }
+  if (getPilotIdFromURL()) localStorage.setItem('nidtraque_pilot_id', pilotId);
 
   phoneId = getPhoneId();
 
   setInitStatus('Chargement du secteur…');
 
-  // Charger infos pilote depuis Supabase
+  // Charger pilote
   try {
     const { data, error } = await sb
       .from('admin_profiles')
-      .select('id, nom, prenom, secteur, trait_length_m, validity_days')
+      .select('id, nom, prenom, secteur, trait_length_m, validity_days, parent_id')
       .eq('id', pilotId)
       .single();
-
     if (error || !data) throw new Error(error?.message || 'Pilote introuvable');
 
+    // Charger admin parent si dispo
+    let adminNom = '—';
+    if (data.parent_id) {
+      const { data: adm } = await sb
+        .from('admin_profiles')
+        .select('nom, prenom')
+        .eq('id', data.parent_id)
+        .single();
+      if (adm) adminNom = `${adm.prenom || ''} ${adm.nom || ''}`.trim();
+    }
+
     pilotData = {
-      pilot_id: data.id,
-      pilot_nom: `${data.prenom || ''} ${data.nom || ''}`.trim() || data.secteur || 'Pilote',
-      secteur: data.secteur || '',
-      trait_length_m: data.trait_length_m || TRAIT_LENGTH_DEFAULT,
-      validity_days: data.validity_days || 7,
+      pilot_id:      data.id,
+      pilot_nom:     `${data.prenom || ''} ${data.nom || ''}`.trim() || 'Pilote',
+      secteur:       data.secteur  || '—',
+      trait_length_m:data.trait_length_m || TRAIT_LENGTH_DEF,
+      validity_days: data.validity_days  || 7,
+      admin_nom:     adminNom,
     };
   } catch(e) {
-    showError('Pilote introuvable', `Impossible de charger les données du secteur. (${e.message})`);
+    showError('Pilote introuvable', `Impossible de charger les données du secteur.\n(${e.message})`);
     return;
   }
 
-  setInitStatus('Prêt');
-  startMap();
-}
+  // Charger pseudo depuis pilot_user_stats
+  setInitStatus('Chargement du profil…');
+  try {
+    const { data: ps } = await sb
+      .from('pilot_user_stats')
+      .select('pseudo')
+      .eq('phone_id', phoneId)
+      .eq('pilot_id', pilotData.pilot_id)
+      .maybeSingle();
+    pseudoName = ps?.pseudo || phoneId.slice(0, 10);
+  } catch(e) {
+    pseudoName = phoneId.slice(0, 10);
+  }
 
-// ══════════════════════════════════════════════
-//  CARTE
-// ══════════════════════════════════════════════
-function startMap() {
-  showScreen('map');
-  document.getElementById('topbar-pilot').textContent =
-    `${pilotData.secteur ? pilotData.secteur + ' · ' : ''}${pilotData.pilot_nom}`;
+  // Remplir header
+  document.getElementById('hdr-admin').textContent      = pilotData.admin_nom;
+  document.getElementById('hdr-territoire').textContent = pilotData.secteur;
+  document.getElementById('hdr-pilote').textContent     = pilotData.pilot_nom;
+  document.getElementById('hdr-sentinel').textContent   = pseudoName;
 
-  // Init Leaflet
-  map = L.map('map', {
-    center: [45.5, 5.5],
-    zoom: 14,
-    zoomControl: false,
-    attributionControl: true,
-  });
+  showScreen('main');
 
-  // Fond IGN via Géoportail (WMTS public)
-  L.tileLayer('https://wxs.ign.fr/essentiels/geoportail/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
-    maxZoom: 19,
-    attribution: '© IGN',
-    crossOrigin: true,
-  }).on('tileerror', () => {
-    // fallback OSM si IGN indisponible
-  }).addTo(map);
-
-  // Fallback OSM en dessous
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OSM',
-    opacity: 0,
-    zIndex: 0,
-  }).addTo(map);
-
-  // Contrôle zoom en bas à droite (pas masqué par bottom panel)
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-  // GPS
+  // Démarrer GPS + boussole
   startGPS();
-
-  // Boussole
   startCompass();
-
-  // Charger signalements existants
-  loadSignals();
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 //  GPS
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 function startGPS() {
-  if (!navigator.geolocation) {
-    updateStatus('gps', 'err', 'GPS non supporté');
-    return;
-  }
-
+  if (!navigator.geolocation) return;
   navigator.geolocation.watchPosition(
     pos => {
-      myPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-      updateStatus('gps', 'ok', `GPS ·  ±${Math.round(pos.coords.accuracy)}m`);
-      updateMapPosition();
-      checkReady();
+      livePos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      // Afficher si pas encore verrouillé
+      if (!lockedPos) updatePosDisplay(livePos);
     },
-    err => {
-      updateStatus('gps', 'err', 'GPS refusé');
-    },
+    () => {},
     { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
   );
 }
 
-function updateMapPosition() {
-  if (!myPos || !map) return;
-  const ll = [myPos.lat, myPos.lon];
-  if (!myMarker) {
-    const icon = L.divIcon({ className: '', html: '<div class="my-marker"></div>', iconSize: [16,16], iconAnchor: [8,8] });
-    myMarker = L.marker(ll, { icon, zIndexOffset: 1000 }).addTo(map);
-    map.setView(ll, 15);
-  } else {
-    myMarker.setLatLng(ll);
-  }
+function updatePosDisplay(pos) {
+  document.getElementById('disp-lat').textContent = 'Lat: ' + pos.lat.toFixed(5);
+  document.getElementById('disp-lon').textContent = 'Long: ' + pos.lon.toFixed(5);
 }
 
-// ══════════════════════════════════════════════
+function lockGPS() {
+  if (!livePos) { showToast('⚠️ GPS non disponible', 'err'); return; }
+  lockedPos = { ...livePos };
+  updatePosDisplay(lockedPos);
+  const btn = document.getElementById('btn-gps');
+  btn.textContent = '✅ Position';
+  btn.classList.add('locked');
+  checkReady();
+}
+
+// ════════════════════════════════════════════
 //  BOUSSOLE
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 function startCompass() {
-  // iOS 13+ — DeviceOrientationEvent.requestPermission()
   if (typeof DeviceOrientationEvent !== 'undefined' &&
       typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iOS — afficher overlay
     document.getElementById('perm-overlay').classList.add('show');
-    document.getElementById('btn-perm-compass').addEventListener('click', async () => {
+    document.getElementById('btn-perm-compass').onclick = async () => {
       try {
-        const perm = await DeviceOrientationEvent.requestPermission();
-        if (perm === 'granted') {
-          document.getElementById('perm-overlay').classList.remove('show');
-          bindCompass();
-        } else {
-          updateStatus('compass', 'err', 'Boussole refusée');
-          document.getElementById('perm-overlay').classList.remove('show');
-        }
+        const r = await DeviceOrientationEvent.requestPermission();
+        document.getElementById('perm-overlay').classList.remove('show');
+        if (r === 'granted') bindCompass();
+        else showToast('🧭 Boussole refusée — direction manuelle impossible', 'err', 5000);
       } catch(e) {
-        updateStatus('compass', 'err', 'Boussole indisponible');
         document.getElementById('perm-overlay').classList.remove('show');
       }
-    });
+    };
   } else {
-    // Android / desktop
     bindCompass();
   }
 }
 
 function bindCompass() {
-  window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-  window.addEventListener('deviceorientation', handleOrientation, true);
+  window.addEventListener('deviceorientationabsolute', onOrientation, true);
+  window.addEventListener('deviceorientation',         onOrientation, true);
 }
 
-function handleOrientation(e) {
+function onOrientation(e) {
   let deg = null;
-
-  if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
-    // iOS
-    deg = e.webkitCompassHeading;
-  } else if (e.absolute && e.alpha !== null) {
-    // Android absolu
-    deg = (360 - e.alpha) % 360;
-  } else if (e.alpha !== null) {
-    // Fallback non-absolu
-    deg = (360 - e.alpha) % 360;
-  }
-
+  if (e.webkitCompassHeading != null)       deg = e.webkitCompassHeading;
+  else if (e.absolute && e.alpha != null)   deg = (360 - e.alpha) % 360;
+  else if (e.alpha != null)                 deg = (360 - e.alpha) % 360;
   if (deg === null) return;
 
-  azimuth = Math.round(deg);
-  compassGranted = true;
+  liveAzimuth = Math.round(deg);
 
-  // Rotate needle
-  const needle = document.getElementById('needle');
-  if (needle) needle.setAttribute('transform', `rotate(${azimuth}, 26, 26)`);
-  document.getElementById('compass-deg').textContent = azimuth + '°';
-  updateStatus('compass', 'ok', `Boussole · ${azimuth}°`);
+  // Mettre à jour flèche si pas verrouillée
+  if (lockedAzimuth === null) {
+    updateArrow(liveAzimuth);
+    document.getElementById('disp-dir').textContent     = 'Dir: ' + liveAzimuth + ' deg';
+    document.getElementById('disp-dir-sub').textContent = 'live boussole';
+  }
+}
+
+function updateArrow(deg) {
+  document.getElementById('arrow-svg').style.transform = `rotate(${deg}deg)`;
+  document.getElementById('arrow-deg').textContent     = deg + '°';
+}
+
+function lockCompass() {
+  if (liveAzimuth === null) { showToast('⚠️ Boussole non disponible', 'err'); return; }
+  lockedAzimuth = liveAzimuth;
+  updateArrow(lockedAzimuth);
+  document.getElementById('disp-dir').textContent     = 'Dir: ' + lockedAzimuth + ' deg';
+  document.getElementById('disp-dir-sub').textContent = '🔒 verrouillée';
+  const btn = document.getElementById('btn-compass');
+  btn.textContent = '✅ Boussole';
+  btn.classList.add('locked');
   checkReady();
 }
 
-// ══════════════════════════════════════════════
-//  STATUS
-// ══════════════════════════════════════════════
-function updateStatus(type, state, label) {
-  const dot = document.getElementById('dot-' + type);
-  const lbl = document.getElementById('lbl-' + type);
-  dot.className = 'status-dot ' + state;
-  lbl.textContent = label;
-}
-
-function checkReady() {
-  const btn = document.getElementById('btn-signal');
-  if (myPos && azimuth !== null) {
-    btn.disabled = false;
-  }
-}
-
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 //  SIGNALER
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
 async function doSignal() {
-  if (!myPos || azimuth === null) return;
+  if (!lockedPos || lockedAzimuth === null) return;
 
-  const btn = document.getElementById('btn-signal');
-  btn.disabled = true;
-  btn.classList.add('sending');
-  btn.innerHTML = '<span>⏳</span><span>Envoi…</span>';
+  const btn = document.getElementById('btn-enregister');
+  btn.disabled   = true;
+  btn.textContent = 'Envoi en cours…';
 
   const payload = {
-    phone_id: phoneId,
-    pilot_id: pilotData.pilot_id,
-    lat: myPos.lat,
-    lon: myPos.lon,
-    azimuth: azimuth,
+    phone_id:   phoneId,
+    pilot_id:   pilotData.pilot_id,
+    lat:        lockedPos.lat,
+    lon:        lockedPos.lon,
+    azimuth:    lockedAzimuth,
     created_at: new Date().toISOString(),
   };
 
   try {
-    // Insertion dans la table signals (même table que Pot à Mèche)
-    const { error } = await sb.from('signals').insert([payload]);
+    const { data, error } = await sb.from('signals').insert([payload]).select('id').single();
     if (error) throw new Error(error.message);
+    lastSignalId = data?.id || null;
+    showToast('✅ Signalement enregistré !', 'ok');
 
-    showToast('✅ Signalement enregistré', 'ok');
-    // Afficher localement immédiatement
-    drawFuseau(myPos.lat, myPos.lon, azimuth, pilotData.trait_length_m, true);
+    // Réinitialiser verrous pour prochaine obs
+    lockedPos      = null;
+    lockedAzimuth  = null;
+    document.getElementById('btn-gps').textContent     = 'Position';
+    document.getElementById('btn-gps').classList.remove('locked');
+    document.getElementById('btn-compass').textContent = 'Boussole';
+    document.getElementById('btn-compass').classList.remove('locked');
+    document.getElementById('disp-dir-sub').textContent = 'en attente…';
+
   } catch(e) {
-    showToast('❌ Erreur : ' + e.message, 'err', 4000);
+    showToast('❌ Erreur : ' + e.message, 'err', 5000);
   }
 
-  btn.disabled = false;
-  btn.classList.remove('sending');
-  btn.innerHTML = '<span>📍</span><span>Signaler un frelon</span>';
+  btn.innerHTML = 'Enregistrer<br>la direction carte partagée';
+  checkReady();
 }
 
-// ══════════════════════════════════════════════
-//  FUSEAUX
-// ══════════════════════════════════════════════
-function degToRad(d) { return d * Math.PI / 180; }
-
-function destinationPoint(lat, lon, bearing, distM) {
-  const R = 6371000;
-  const d = distM / R;
-  const b = degToRad(bearing);
-  const lat1 = degToRad(lat);
-  const lon1 = degToRad(lon);
-  const lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(b));
-  const lon2 = lon1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(lat1), Math.cos(d)-Math.sin(lat1)*Math.sin(lat2));
-  return [lat2 * 180/Math.PI, lon2 * 180/Math.PI];
-}
-
-function drawFuseau(lat, lon, az, lengthM, isMine = false) {
-  const origin = [lat, lon];
-  const left  = destinationPoint(lat, lon, az - TRAIT_ANGLE, lengthM);
-  const right = destinationPoint(lat, lon, az + TRAIT_ANGLE, lengthM);
-  const tip   = destinationPoint(lat, lon, az, lengthM);
-
-  const color = isMine ? '#6dbf67' : '#f5a623';
-  const opacity = isMine ? 0.55 : 0.35;
-
-  const poly = L.polygon([origin, left, tip, right, origin], {
-    color: color,
-    fillColor: color,
-    fillOpacity: opacity,
-    weight: 1.5,
-    opacity: 0.8,
-  }).addTo(map);
-
-  signalLayers.push(poly);
-}
-
-// ══════════════════════════════════════════════
-//  CHARGER SIGNALEMENTS EXISTANTS
-// ══════════════════════════════════════════════
-async function loadSignals() {
+// ════════════════════════════════════════════
+//  ANNULER DERNIER
+// ════════════════════════════════════════════
+async function cancelLast() {
+  if (!lastSignalId) { showToast('Aucun signalement à annuler', 'err'); return; }
   try {
-    // Validité : on filtre côté client (validity_days du pilote)
-    const since = new Date();
-    since.setDate(since.getDate() - (pilotData.validity_days || 7));
+    const { error } = await sb.from('signals').delete().eq('id', lastSignalId);
+    if (error) throw new Error(error.message);
+    showToast('↩️ Dernier signalement annulé', 'ok');
+    lastSignalId = null;
+    // Rafraîchir carte si ouverte
+    if (mapInited) { refreshMap(); }
+  } catch(e) {
+    showToast('❌ ' + e.message, 'err', 4000);
+  }
+}
 
+// ════════════════════════════════════════════
+//  CARTE
+// ════════════════════════════════════════════
+function showMap() { showScreen('map'); }
+
+function initMap() {
+  if (mapInited) { refreshMap(); return; }
+  mapInited = true;
+
+  map = L.map('map', { center: [45.1, 5.7], zoom: 13, zoomControl: true, attributionControl: true });
+
+  // IGN avec fallback OSM
+  const ign = L.tileLayer(
+    'https://wxs.ign.fr/essentiels/geoportail/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+    { maxZoom: 19, attribution: '© IGN', crossOrigin: true }
+  );
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom: 19, attribution: '© OSM' });
+
+  ign.addTo(map);
+  ign.on('tileerror', () => { if (!map.hasLayer(osm)) osm.addTo(map); });
+
+  refreshMap();
+}
+
+async function refreshMap() {
+  if (!map) return;
+
+  // Effacer anciens layers
+  map.eachLayer(l => { if (l._isSignal) map.removeLayer(l); });
+
+  const since = new Date();
+  since.setDate(since.getDate() - (pilotData?.validity_days || 7));
+
+  try {
     const { data, error } = await sb
       .from('signals')
-      .select('lat, lon, azimuth, phone_id, created_at')
+      .select('lat, lon, azimuth, phone_id, created_at, id')
       .eq('pilot_id', pilotData.pilot_id)
       .gte('created_at', since.toISOString());
 
     if (error) throw error;
-    if (!data) return;
+    if (!data?.length) return;
 
+    const bounds = [];
     data.forEach(s => {
       const isMine = s.phone_id === phoneId;
-      drawFuseau(s.lat, s.lon, s.azimuth, pilotData.trait_length_m, isMine);
+      const color  = isMine ? '#2e7d32' : '#f5a623';
+      const poly   = drawFuseau(s.lat, s.lon, s.azimuth, pilotData.trait_length_m, color);
+      poly._isSignal = true;
+      poly.addTo(map);
+      poly.bindPopup(`
+        <div style="font-size:13px;line-height:1.7">
+          <b>${isMine ? '👤 Moi' : '👥 Sentinelle'}</b><br>
+          Dir: ${s.azimuth}°<br>
+          ${new Date(s.created_at).toLocaleString('fr-FR')}
+        </div>`);
+      bounds.push([s.lat, s.lon]);
     });
+
+    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
   } catch(e) {
-    console.warn('loadSignals error:', e.message);
+    showToast('Erreur carte : ' + e.message, 'err');
   }
 }
 
-// ══════════════════════════════════════════════
-//  DÉMARRAGE
-// ══════════════════════════════════════════════
+function degToRad(d) { return d * Math.PI / 180; }
+
+function destinationPoint(lat, lon, bearing, distM) {
+  const R = 6371000, d = distM / R, b = degToRad(bearing);
+  const φ1 = degToRad(lat), λ1 = degToRad(lon);
+  const φ2 = Math.asin(Math.sin(φ1)*Math.cos(d) + Math.cos(φ1)*Math.sin(d)*Math.cos(b));
+  const λ2 = λ1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(φ1), Math.cos(d)-Math.sin(φ1)*Math.sin(φ2));
+  return [φ2*180/Math.PI, λ2*180/Math.PI];
+}
+
+function drawFuseau(lat, lon, az, lenM, color) {
+  const o = [lat, lon];
+  const l = destinationPoint(lat, lon, az - TRAIT_ANGLE, lenM);
+  const r = destinationPoint(lat, lon, az + TRAIT_ANGLE, lenM);
+  const t = destinationPoint(lat, lon, az, lenM);
+  return L.polygon([o, l, t, r, o], {
+    color, fillColor: color, fillOpacity: 0.4, weight: 1.5, opacity: 0.85
+  });
+}
+
+// ════════════════════════════════════════════
+//  START
+// ════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
