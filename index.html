@@ -245,10 +245,16 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
 
   <!-- header -->
   <div class="header">
-    <div class="header-title">VigieNid <span class="header-version">V 1.0</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="header-title" style="margin-bottom:0;">VigieNid <span class="header-version">V 1.0</span></div>
+      <button id="btn-share" onclick="showQR()" style="display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:2px 6px;line-height:1;" title="Partager l'application">📲</button>
+    </div>
     <div class="header-grid">
       <div class="header-label">Admin.</div>
-      <div class="header-value" id="hdr-admin">—</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="header-value" id="hdr-admin">—</div>
+        <div style="font-size:10px;color:#4a7090;font-style:italic;">Barrois-Lambour</div>
+      </div>
       <div class="header-label">Territoire</div>
       <div class="header-value territory" id="hdr-territoire">—</div>
       <div class="header-label">Pilote</div>
@@ -302,7 +308,6 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
     <button class="btn-sec" onclick="showMapMine()">Visualiser mes signalements</button>
     <button class="btn-sec" onclick="showMap()">Accès à la carte partagée</button>
     <button class="btn-sec danger" onclick="cancelLast()">Annuler dernière signalisation</button>
-    <button class="btn-sec" id="btn-share" style="display:none;border-color:#2a7fc1;color:#2a7fc1;" onclick="showQR()">📲 Partager l'application</button>
     <div style="text-align:center; font-size:13px; color:var(--muted); font-style:italic; padding: 4px 0 8px;">
       🐝 Ensemble, traquons les nids !
     </div>
