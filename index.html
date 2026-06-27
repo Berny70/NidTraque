@@ -568,41 +568,39 @@ function startCompass() {
 }
 
 function bindCompass() {
-  // Tester d'abord deviceorientationabsolute (Android)
-  let usingAbsolute = false;
-
-  window.addEventListener('deviceorientationabsolute', e => {
-    if (e.alpha === null) return;
-    usingAbsolute = true;
-    const deg = (360 - e.alpha) % 360;
-    onCompassValue(Math.round(deg));
-  }, true);
-
-  // deviceorientation seulement si pas d'événement absolu (iOS)
-  setTimeout(() => {
-    if (!usingAbsolute) {
-      window.addEventListener('deviceorientation', e => {
-        let deg = null;
-        if (e.webkitCompassHeading != null) {
-          deg = e.webkitCompassHeading; // iOS
-        } else if (e.alpha != null) {
-          deg = (360 - e.alpha) % 360;  // fallback
-        }
-        if (deg !== null) onCompassValue(Math.round(deg));
-      }, true);
-    }
-  }, 1000);
+  // iOS : uniquement deviceorientation + webkitCompassHeading (vraie boussole calibrée).
+  // deviceorientationabsolute sur iOS donne un alpha non calibré et fausse la mesure.
+  if (typeof DeviceOrientationEvent !== 'undefined' && /iP(hone|ad|od)/.test(navigator.userAgent)) {
+    window.addEventListener('deviceorientation', onOrientation, true);
+  } else {
+    window.addEventListener('deviceorientationabsolute', onOrientation, true);
+    window.addEventListener('deviceorientation',         onOrientation, true);
+  }
 }
 
-// Lissage léger : moyenne glissante sur 5 valeurs
-const _smoothBuf = [];
-function onCompassValue(deg) {
-  _smoothBuf.push(deg);
-  if (_smoothBuf.length > 5) _smoothBuf.shift();
+let lastHeading = null;
 
-  const sinS = _smoothBuf.reduce((s, d) => s + Math.sin(d * Math.PI/180), 0);
-  const cosS = _smoothBuf.reduce((s, d) => s + Math.cos(d * Math.PI/180), 0);
-  liveAzimuth = Math.round((Math.atan2(sinS, cosS) * 180/Math.PI + 360) % 360);
+function onOrientation(e) {
+  let heading = null;
+
+  // webkitCompassHeading (iOS) est toujours prioritaire et fiable
+  if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
+    heading = e.webkitCompassHeading;
+  } else if (e.absolute === true && typeof e.alpha === 'number') {
+    heading = (360 - e.alpha) % 360;
+  }
+
+  if (heading === null || isNaN(heading)) return;
+
+  // Ignorer les sauts > 20° (parasite / bruit)
+  if (lastHeading !== null) {
+    let delta = Math.abs(heading - lastHeading);
+    if (delta > 180) delta = 360 - delta;
+    if (delta > 20) return;
+  }
+
+  lastHeading  = heading;
+  liveAzimuth  = Math.round(heading);
 
   if (lockedAzimuth === null) {
     updateArrow(liveAzimuth);
