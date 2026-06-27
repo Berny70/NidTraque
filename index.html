@@ -299,6 +299,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
         <div class="bloc-label">🧭 Direction</div>
         <div class="dir" id="disp-dir">Dir: —</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px" id="disp-dir-sub">en attente…</div>
+        <button class="btn-compass-lock" id="btn-init-compass" onclick="initCompass()" style="background:#e67e22;margin-bottom:4px;">🎯 Initialiser</button>
         <button class="btn-compass-lock" id="btn-compass" onclick="lockCompass()">Boussole</button>
       </div>
 
@@ -603,6 +604,62 @@ function lockCompass() {
   btn.textContent = '✅ Boussole';
   btn.classList.add('locked');
   checkReady();
+}
+
+// Initialisation boussole — moyenne sur 5 secondes
+let _initSamples = [];
+let _initTimer   = null;
+const INIT_DURATION = 5000; // ms
+const INIT_INTERVAL = 200;  // ms
+
+function initCompass() {
+  if (liveAzimuth === null) { showToast('⚠️ Boussole non disponible', 'err'); return; }
+
+  // Réinitialiser
+  _initSamples = [];
+  clearInterval(_initTimer);
+
+  const btn     = document.getElementById('btn-init-compass');
+  const subLbl  = document.getElementById('disp-dir-sub');
+  const total   = INIT_DURATION / INIT_INTERVAL;
+  let   count   = 0;
+
+  btn.textContent = '⏳ 5s…';
+  btn.disabled    = true;
+
+  _initTimer = setInterval(() => {
+    if (liveAzimuth !== null) _initSamples.push(liveAzimuth);
+    count++;
+
+    const remaining = Math.ceil((total - count) * INIT_INTERVAL / 1000);
+    btn.textContent  = `⏳ ${remaining}s…`;
+    subLbl.textContent = `Échantillons : ${_initSamples.length}`;
+
+    if (count >= total) {
+      clearInterval(_initTimer);
+
+      if (_initSamples.length === 0) {
+        showToast('⚠️ Aucun échantillon', 'err');
+        btn.textContent = '🎯 Initialiser';
+        btn.disabled    = false;
+        return;
+      }
+
+      // Moyenne circulaire
+      const sinSum = _initSamples.reduce((s, d) => s + Math.sin(d * Math.PI / 180), 0);
+      const cosSum = _initSamples.reduce((s, d) => s + Math.cos(d * Math.PI / 180), 0);
+      const avg    = Math.round((Math.atan2(sinSum, cosSum) * 180 / Math.PI + 360) % 360);
+
+      liveAzimuth = avg;
+      updateArrow(avg);
+      document.getElementById('disp-dir').textContent = 'Dir: ' + avg + ' deg';
+      subLbl.textContent = '✅ Initialisée (' + _initSamples.length + ' mesures)';
+
+      btn.textContent = '🎯 Initialiser';
+      btn.disabled    = false;
+      showToast('🎯 Boussole initialisée : ' + avg + '°', 'ok');
+    }
+  }, INIT_INTERVAL);
 }
 
 // ════════════════════════════════════════════
