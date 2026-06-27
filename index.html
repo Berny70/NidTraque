@@ -640,7 +640,7 @@ async function doSignal() {
     lat:       lockedPos.lat,
     lon:       lockedPos.lon,
     direction: lockedAzimuth,
-    distance:  pilotData.trait_length_m,
+    distance:  pilotData.trait_length_m || 800,
   };
 
   try {
@@ -722,7 +722,9 @@ async function refreshMap() {
     let query = sb
       .from('chrono_frelon_geo')
       .select('lat, lon, direction, distance, phone_id, created_at, id')
-      .gte('created_at', since.toISOString());
+      .gte('created_at', since.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (_mineOnly) query = query.eq('phone_id', phoneId);
 
