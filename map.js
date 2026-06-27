@@ -176,7 +176,8 @@ function afficherObservations() {
     // FUSEAU DIRECTIONNEL (±5°)
     // ==========================
     const fuseauLength = distance === 0 ? 1500 : distance;
-    const fuseauPoints = buildFuseau(obs.lat, obs.lon, direction, fuseauLength, 5);
+    const halfAngle = parseInt(localStorage.getItem("vigienid_angle") || "5");
+    const fuseauPoints = buildFuseau(obs.lat, obs.lon, direction, fuseauLength, halfAngle);
 
     L.polygon(fuseauPoints, {
       color,

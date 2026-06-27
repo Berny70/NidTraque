@@ -158,7 +158,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
 <div class="header">
   <div class="header-title-row">
     <div class="header-title">VigieNid</div>
-    <button id="btn-share" class="header-share-btn" onclick="showQR()" title="Partager">📲</button>
+    <div style="position:absolute;right:0;top:0;display:flex;gap:2px;">
+      <button id="btn-settings" onclick="showSettings()" style="display:none;background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Paramètres pilote">⚙️</button>
+      <button id="btn-share" class="header-share-btn" style="position:static;" onclick="showQR()" title="Partager">📲</button>
+    </div>
   </div>
   <div class="header-grid">
     <div class="header-label">Admin.</div>
@@ -230,6 +233,34 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
     <span style="font-size:16px;color:#2d5a27;font-style:italic;font-weight:700;">Ensemble, traquons les nids !</span>
   </div>
 
+</div>
+
+<!-- Panneau paramètres pilote -->
+<div id="settings-overlay" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(27,45,62,0.96);align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:28px;color:#fff;">
+  <div style="font-size:18px;font-weight:700;color:#7ec8f7;">⚙️ Paramètres pilote</div>
+  <div style="width:100%;max-width:320px;background:#1a3550;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:16px;">
+
+    <div>
+      <div style="font-size:12px;color:#8fafc8;margin-bottom:6px;">📏 Longueur du faisceau (m)</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="set-length" type="range" min="200" max="3000" step="50" style="flex:1;"
+          oninput="document.getElementById('set-length-val').textContent=this.value+'m'">
+        <span id="set-length-val" style="min-width:55px;text-align:right;font-weight:700;color:#7ec8f7;">—</span>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;color:#8fafc8;margin-bottom:6px;">📐 Demi-angle du faisceau (±°)</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="set-angle" type="range" min="3" max="30" step="1" style="flex:1;"
+          oninput="document.getElementById('set-angle-val').textContent='±'+this.value+'°'">
+        <span id="set-angle-val" style="min-width:55px;text-align:right;font-weight:700;color:#7ec8f7;">—</span>
+      </div>
+    </div>
+
+  </div>
+  <button onclick="saveSettings()" style="padding:13px 40px;background:#2a7fc1;color:#fff;border:none;border-radius:99px;font-size:15px;font-weight:700;cursor:pointer;">💾 Enregistrer</button>
+  <button onclick="document.getElementById('settings-overlay').style.display='none'" style="padding:10px 32px;background:none;border:1px solid #4a7090;color:#8fafc8;border-radius:99px;font-size:14px;cursor:pointer;">Fermer</button>
 </div>
 
 <!-- Toast -->
@@ -312,8 +343,28 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (pilot.phone_id === phoneId ||
       ['pilot','admin_dept','superadmin'].includes(pilot.role)) {
     document.getElementById('btn-share').style.display = 'block';
+    document.getElementById('btn-settings').style.display = 'block';
   }
 });
+
+window.showSettings = function() {
+  const len = parseInt(localStorage.getItem('vigienid_length') || '800');
+  const ang = parseInt(localStorage.getItem('vigienid_angle') || '5');
+  const sl = document.getElementById('set-length');
+  const sa = document.getElementById('set-angle');
+  sl.value = len; document.getElementById('set-length-val').textContent = len + 'm';
+  sa.value = ang; document.getElementById('set-angle-val').textContent = '±' + ang + '°';
+  document.getElementById('settings-overlay').style.display = 'flex';
+};
+
+window.saveSettings = function() {
+  const len = parseInt(document.getElementById('set-length').value);
+  const ang = parseInt(document.getElementById('set-angle').value);
+  localStorage.setItem('vigienid_length', len);
+  localStorage.setItem('vigienid_angle', ang);
+  document.getElementById('settings-overlay').style.display = 'none';
+  alert('✅ Paramètres enregistrés\nLongueur : ' + len + 'm · Angle : ±' + ang + '°');
+};
 
 window.editPseudo = async function() {
   const current = document.getElementById('hdr-sentinel').textContent;
