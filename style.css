@@ -1,0 +1,658 @@
+/* ================================
+   GLOBAL
+================================ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f5f5;
+  color: #000;
+}
+
+/* ================================
+   HEADER
+================================ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 2px solid #ccc;
+}
+
+.top-logo {
+  width: 36px;
+  height: 36px;
+}
+
+/* ================================
+   HEADER - GAUCHE
+================================ */
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-help {
+  background: #03a9f4;
+  color: #fff;
+  font-weight: bold;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+/* ================================
+   HEADER - DROIT
+================================ */
+
+.top-right {
+  text-align: right;
+  font-size: 0.85em;
+  line-height: 1.3em;
+  min-width: 90px;
+
+  /* sécurité layout */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.author {
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+/* ligne icône + version */
+.top-right-sub {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 0.85em;
+}
+
+/* bouton enveloppe */
+#btnMail {
+  background: none;
+  border: none;
+  font-size: 1.1em;        /* légèrement réduit */
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;     /* alignement vertical */
+}
+
+#btnMail:hover {
+  opacity: 0.7;
+}
+
+
+
+/* ================================
+   CHRONOS
+================================ */
+#chronos {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chrono {
+  padding: 12px;
+  border-radius: 8px;
+}
+
+/* Couleurs pastel */
+.chrono.red {
+  background: #f8d7da;
+  border: 2px solid #c00;
+}
+.chrono.blue {
+  background: #d0e7f9;
+  border: 2px solid #0077cc;
+}
+.chrono.green {
+  background: #d4edda;
+  border: 2px solid #0a0;
+}
+.chrono.white {
+  background: #f0f0f0;
+  border: 2px solid #999;
+}
+
+/* ================================
+   LAYOUT DES LIGNES
+================================ */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.row-main .time {
+  font-size: 2em;
+  font-weight: bold;
+  flex: 1;
+  text-align: center;
+}
+
+.row-info {
+  font-size: 0.9em;
+}
+
+.info-block {
+  flex: 1;
+  text-align: center;
+}
+
+.row-info input {
+  width: 60px;
+  text-align: center;
+}
+
+.row-actions {
+  margin-top: 8px;
+}
+
+.row-actions button {
+  flex: 1;
+  margin: 0 4px;
+}
+
+/* ================================
+   BOUTONS
+================================ */
+/* Boutons principaux de l'app */
+/* Boutons principaux de l'app (PAS l'enveloppe) */
+.chrono button,
+.top-actions button,
+.help-box button {
+  padding: 8px 12px;
+  font-size: 0.95em;
+  font-weight: bold;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+/* bouton enveloppe : neutre */
+#btnMail {
+  padding: 0 !important;
+  font-size: 1.1em;
+  border-radius: 0;
+}
+
+
+
+.start {
+  background: #4caf50;
+  color: #fff;
+}
+
+.reset {
+  background: #f44336;
+  color: #fff;
+}
+
+.pos {
+  background: #ffc107;
+  color: #000;
+}
+
+.compass {
+  background: #2196f3;
+  color: #fff;
+}
+
+.det {
+  background: #9e9e9e;
+  color: #000;
+}
+
+/* ================================
+   STATS DISCRÈTES
+================================ */
+.info {
+  text-align: center;
+  font-size: 0.85em;
+  margin-top: 4px;
+}
+
+/* ================================
+   OVERLAY DÉTAIL
+================================ */
+#detOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.det-box {
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 420px;
+}
+
+.det-line {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+}
+
+#detOverlay.red .det-box { background: #f8d7da; }
+#detOverlay.blue .det-box { background: #d0e7f9; }
+#detOverlay.green .det-box { background: #d4edda; }
+#detOverlay.white .det-box { background: #f0f0f0; }
+
+/* ================================
+   OVERLAY BOUSSOLE
+================================ */
+#compassOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.compass-box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  width: 80%;
+  max-width: 320px;
+}
+
+#headingValue {
+  font-size: 3em;
+  font-weight: bold;
+  margin: 20px 0;
+}
+
+/* ================================
+   ACTIONS HAUT DE PAGE
+================================ */
+.top-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  gap: 10px;
+}
+
+.btn-capt {
+  background: #ffeb3b;
+  font-weight: bold;
+}
+
+.btn-loc {
+  background: #8bc34a;
+  font-weight: bold;
+}
+
+/* ================================
+   DATE & HEURE
+================================ */
+.date-time {
+  font-weight: bold;
+  font-size: 0.95em;
+  text-align: center;
+  flex: 1;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+@media (max-width: 600px) {
+  .top-title {
+    font-size: 1.6em;
+  }
+
+  .top-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .row-main .time {
+    font-size: 1.6em;
+  }
+
+  button {
+    font-size: 0.9em;
+    padding: 6px 10px;
+  }
+}
+
+/* ==========================
+   HELP – AIDE UTILISATEUR (V7)
+   ========================== */
+
+#helpOverlay,
+.helpOverlaySub {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30000;
+}
+
+.help-box {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  text-align: center;
+
+  color: #000;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.help-box * {
+  color: #000;
+}
+
+.help-box h2 {
+  margin-top: 0;
+}
+
+.help-box h3 {
+  margin-top: 12px;
+}
+
+.help-box ul,
+.help-box ol {
+  padding-left: 18px;
+  text-align: left;
+}
+
+.help-btn {
+  width: 100%;
+  margin: 6px 0;
+  padding: 10px;
+  font-size: 1em;
+  background: #03a9f4;
+  color: #fff !important;
+  font-weight: bold;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.help-btn:hover {
+  opacity: 0.85;
+}
+
+.help-box button {
+  margin-top: 12px;
+  width: 100%;
+  background: #4caf50;
+  color: #fff !important;
+  font-weight: bold;
+  border-radius: 6px;
+}
+
+/* ==========================
+   OVERLAY LOCALISATION DU NID
+   ========================== */
+
+#locOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25000;
+}
+
+.loc-box {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+
+  color: #000;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.loc-box button {
+  width: 100%;
+  margin: 6px 0;
+  padding: 10px;
+  font-size: 1em;
+  font-weight: bold;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.loc-box button[data-action="local"] {
+  background: #8bc34a;
+}
+
+.loc-box button[data-action="send"] {
+  background: #03a9f4;
+  color: #fff;
+}
+
+.loc-box button[data-action="shared"] {
+  background: #ff9800;
+}
+
+.loc-box button[data-action="close"] {
+  background: #9e9e9e;
+  color: #000;
+}
+/* ==========================
+   GPS Spinner 
+   ========================== */
+.gps-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ccc;
+  border-top: 2px solid #4caf50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+/* ==========================
+   langue
+   ========================== */
+.lang-bar {
+  display: flex;
+  justify-content: center;
+  gap: 4px;                 /* ⬅️ plus compact */
+  margin: 6px 0 12px 0;
+  flex-wrap: wrap;          /* ⬅️ évite le débordement */
+}
+
+.lang-bar button {
+  background: #f0f0f0;
+  border: 1px solid #999;
+  border-radius: 6px;
+  padding: 4px 6px;         /* ⬅️ padding réduit */
+  font-size: 0.85em;        /* ⬅️ légèrement plus petit */
+  font-weight: bold;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lang-bar button.active {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+
+.lang-bar button:hover {
+  opacity: 0.85;
+}
+
+/* image du drapeau */
+.lang-bar button img {
+  width: 22px;              /* ⬅️ un peu plus petit */
+  height: auto;
+  display: block;
+}
+.top-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;   /* ⬅️ empile verticalement */
+  align-items: center;      /* ⬅️ centre horizontalement */
+  justify-content: center;
+  text-align: center;
+}
+
+.top-title {
+  font-size: 1.4em;
+  font-weight: bold;
+  line-height: 1.1;
+  white-space: nowrap;      /* ⬅️ pas de coupure interne */
+}
+
+.top-subtitle {
+  font-size: 0.8em;
+  opacity: 0.75;
+  margin-top: 2px;
+  white-space: nowrap;      /* ⬅️ pas de coupure interne */
+}
+/* ================================
+   MODE SELECTOR (Chrono / Direction)
+================================ */
+
+.mode-selector {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  justify-content: center;
+}
+
+.mode-btn {
+  font-size: 0.75em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #999;
+  background: #f0f0f0;
+  cursor: pointer;
+  font-weight: bold;
+  opacity: 0.8;
+}
+
+/* ⬅️ BOUTON ACTIF */
+.mode-btn.active {
+  background: #4caf50;     /* vert */
+  color: #fff;
+  border-color: #4caf50;
+  opacity: 1;
+}
+.declinaison-box {
+  position: absolute;
+  top: 60px;
+  left: 10px;
+
+  z-index: 10000; /* 🔥 PLUS HAUT QUE LE RESTE */
+
+  background: white;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.9em;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+.declinaison-box input {
+  width: 55px;
+  text-align: center;
+}
+/* ==========================
+   POPUP SAISIE MANUELLE
+========================== */
+#manualOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30000;
+}
+
+.manual-box {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+
+  font-size: 16px;
+}
+
+.manual-box input {
+  width: 80%;
+  padding: 6px;
+  margin: 4px 0;
+  text-align: center;
+}
+
+.manual-box button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  font-weight: bold;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
