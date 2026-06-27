@@ -351,7 +351,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
 //  CONFIG — remplacer SUPABASE_ANON_KEY
 // ════════════════════════════════════════════
 const SUPABASE_URL      = 'https://pqozgsgytzntrqscevrt.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxb3pnc2d5dHpudHJxc2NldnJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0Mjk2NzgsImV4cCI6MjA4NTAwNTY3OH0.yi3FOdkBTi6eZsiAtKMqDyKpzVRnfs_nEJsbjCAgy8A';
+const SUPABASE_ANON_KEY = 'sb_publishable_lPacACUx-QTq_-mV7DDc_g_xUQHDCsK';
 const TRAIT_ANGLE       = 15;   // demi-angle fuseau (°)
 const TRAIT_LENGTH_DEF  = 800;  // mètres par défaut
 
@@ -615,16 +615,15 @@ async function doSignal() {
   btn.textContent = 'Envoi en cours…';
 
   const payload = {
-    phone_id:   phoneId,
-    pilot_id:   pilotData.pilot_id,
-    lat:        lockedPos.lat,
-    lon:        lockedPos.lon,
-    azimuth:    lockedAzimuth,
-    created_at: new Date().toISOString(),
+    phone_id:  phoneId,
+    lat:       lockedPos.lat,
+    lon:       lockedPos.lon,
+    direction: lockedAzimuth,
+    distance:  pilotData.trait_length_m,
   };
 
   try {
-    const { data, error } = await sb.from('signals').insert([payload]).select('id').single();
+    const { data, error } = await sb.from('chrono_frelon_geo').insert([payload]).select('id').single();
     if (error) throw new Error(error.message);
     lastSignalId = data?.id || null;
     showToast('✅ Signalement enregistré !', 'ok');
@@ -652,7 +651,7 @@ async function doSignal() {
 async function cancelLast() {
   if (!lastSignalId) { showToast('Aucun signalement à annuler', 'err'); return; }
   try {
-    const { error } = await sb.from('signals').delete().eq('id', lastSignalId);
+    const { error } = await sb.from('chrono_frelon_geo').delete().eq('id', lastSignalId);
     if (error) throw new Error(error.message);
     showToast('↩️ Dernier signalement annulé', 'ok');
     lastSignalId = null;
@@ -682,16 +681,9 @@ function initMap() {
 
   map = L.map('map', { center: [45.1, 5.7], zoom: 13, zoomControl: true, attributionControl: true });
 
-  // IGN avec fallback OSM
-  const ign = L.tileLayer(
-    'https://wxs.ign.fr/essentiels/geoportail/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-    { maxZoom: 19, attribution: '© IGN', crossOrigin: true }
-  );
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { maxZoom: 19, attribution: '© OSM' });
-
-  ign.addTo(map);
-  ign.on('tileerror', () => { if (!map.hasLayer(osm)) osm.addTo(map); });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap'
+  }).addTo(map);
 
   refreshMap();
 }
@@ -707,28 +699,28 @@ async function refreshMap() {
 
   try {
     let query = sb
-      .from('signals')
-      .select('lat, lon, azimuth, phone_id, created_at, id')
-      .eq('pilot_id', pilotData.pilot_id)
+      .from('chrono_frelon_geo')
+      .select('lat, lon, direction, distance, phone_id, created_at, id')
       .gte('created_at', since.toISOString());
 
     if (_mineOnly) query = query.eq('phone_id', phoneId);
 
     const { data, error } = await query;
     if (error) throw error;
-    if (!data?.length) return;
+    if (!data?.length) { showToast('Aucun signalement récent', 'ok'); return; }
 
     const bounds = [];
     data.forEach(s => {
       const isMine = s.phone_id === phoneId;
       const color  = isMine ? '#2e7d32' : '#f5a623';
-      const poly   = drawFuseau(s.lat, s.lon, s.azimuth, pilotData.trait_length_m, color);
+      const length = s.distance || pilotData.trait_length_m;
+      const poly   = drawFuseau(s.lat, s.lon, s.direction, length, color);
       poly._isSignal = true;
       poly.addTo(map);
       poly.bindPopup(`
         <div style="font-size:13px;line-height:1.7">
           <b>${isMine ? '👤 Moi' : '👥 Sentinelle'}</b><br>
-          Dir: ${s.azimuth}°<br>
+          Dir: ${s.direction}° · ${length}m<br>
           ${new Date(s.created_at).toLocaleString('fr-FR')}
         </div>`);
       bounds.push([s.lat, s.lon]);
