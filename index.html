@@ -191,14 +191,38 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
 #screen-map .map-header {
   background: var(--navy); color: #fff;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; flex-shrink: 0;
+  padding: 10px 16px; flex-shrink: 0;
 }
-#screen-map .map-header span { font-size: 15px; font-weight: 700; color: #7ec8f7; }
+#screen-map .map-header span { font-size: 14px; font-weight: 700; color: #7ec8f7; }
 #screen-map .btn-back {
-  padding: 8px 18px; background: #2a7fc1; color: #fff;
+  padding: 7px 14px; background: #2a7fc1; color: #fff;
   border: none; border-radius: 99px; font-size: 13px; font-weight: 600; cursor: pointer;
 }
 #map { flex: 1; }
+
+/* fonds de carte */
+.basemap-control {
+  background: white; border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  padding: 4px; display: flex; flex-direction: column; gap: 2px;
+}
+.basemap-btn {
+  border: none; background: transparent;
+  padding: 6px 10px; font-size: 0.8em;
+  text-align: left; border-radius: 5px;
+  cursor: pointer; white-space: nowrap;
+}
+.basemap-btn:hover { background: #f0f0f0; }
+.basemap-btn--active { background: #2d5a27; color: white; }
+
+/* déclinaison */
+.decl-box {
+  background: white; border-radius: 6px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  padding: 6px 10px; font-size: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.decl-box input { width: 48px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 2px 4px; }
 
 /* leaflet popup */
 .leaflet-popup-content-wrapper {
@@ -321,10 +345,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
 <!-- ══ MAP ══ -->
 <div id="screen-map" class="screen">
   <div class="map-header">
-    <span>🗺️ Signalements</span>
+    <span id="map-title">🗺️ Carte partagée</span>
     <button class="btn-back" onclick="showScreen('main')">← Retour</button>
   </div>
-  <div id="map"></div>
+  <div id="map" style="flex:1;"></div>
 </div>
 
 <!-- modale QR code pilote -->
@@ -686,93 +710,183 @@ async function cancelLast() {
 // ════════════════════════════════════════════
 //  CARTE
 // ════════════════════════════════════════════
-function showMapMine() { showScreen('map'); _mineOnly = true;  initMap(); }
-function showMap()     { showScreen('map'); _mineOnly = false; initMap(); }
+function showMapMine() {
+  _mineOnly = true;
+  document.getElementById('map-title').textContent = '👤 Mes signalements';
+  showScreen('map');
+  initMap();
+}
+function showMap() {
+  _mineOnly = false;
+  document.getElementById('map-title').textContent = '🗺️ Carte partagée';
+  showScreen('map');
+  initMap();
+}
 let _mineOnly = false;
+let _mapBasemapLayer = null;
+let _obsLayer = null;
+let _declinaison = parseFloat(localStorage.getItem('vigienid_decl') || '3');
+
+const BASEMAPS = {
+  osm:       { label: '🗺 Standard',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                                                       opts: { attribution: '© OSM', maxZoom: 19 } },
+  topo:      { label: '🏔 Topo',      url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                                                         opts: { attribution: '© OpenTopoMap', maxZoom: 17 } },
+  relief:    { label: '🌄 Relief',    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',       opts: { attribution: '© Esri', maxZoom: 13 } },
+  satellite: { label: '🛰 Satellite', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',             opts: { attribution: '© Esri', maxZoom: 19 } },
+};
+
+function applyBasemap(key) {
+  const bm = BASEMAPS[key] || BASEMAPS.osm;
+  if (_mapBasemapLayer) map.removeLayer(_mapBasemapLayer);
+  _mapBasemapLayer = L.tileLayer(bm.url, bm.opts).addTo(map);
+  localStorage.setItem('vigienid_basemap', key);
+  document.querySelectorAll('.basemap-btn').forEach(btn => {
+    btn.classList.toggle('basemap-btn--active', btn.dataset.basemap === key);
+  });
+}
+
+function addBasemapControl() {
+  const ctrl = L.control({ position: 'bottomright' });
+  ctrl.onAdd = () => {
+    const div = L.DomUtil.create('div', 'basemap-control');
+    const saved = localStorage.getItem('vigienid_basemap') || 'osm';
+    div.innerHTML = Object.entries(BASEMAPS).map(([key, bm]) =>
+      `<button class="basemap-btn${key === saved ? ' basemap-btn--active' : ''}" data-basemap="${key}">${bm.label}</button>`
+    ).join('');
+    L.DomEvent.disableClickPropagation(div);
+    div.addEventListener('click', e => {
+      const btn = e.target.closest('.basemap-btn');
+      if (btn) applyBasemap(btn.dataset.basemap);
+    });
+    return div;
+  };
+  ctrl.addTo(map);
+}
+
+function addDeclControl() {
+  const ctrl = L.control({ position: 'topleft' });
+  ctrl.onAdd = () => {
+    const div = L.DomUtil.create('div', 'decl-box');
+    div.innerHTML = `Déclinaison : <input type="text" id="decl-input" value="${_declinaison.toFixed(1)}" inputmode="decimal"> °`;
+    L.DomEvent.disableClickPropagation(div);
+    div.querySelector('#decl-input').addEventListener('input', e => {
+      let val = parseFloat(e.target.value.replace(',', '.'));
+      if (isNaN(val)) return;
+      val = Math.max(-30, Math.min(30, val));
+      _declinaison = val;
+      localStorage.setItem('vigienid_decl', val);
+      refreshMap();
+    });
+    return div;
+  };
+  ctrl.addTo(map);
+}
 
 function initMap() {
-  if (mapInited) { 
-    document.querySelector('#screen-map .map-header span').textContent = 
-      _mineOnly ? '👤 Mes signalements' : '🗺️ Carte partagée';
-    refreshMap(); return; 
-  }
+  if (mapInited) { refreshMap(); return; }
   mapInited = true;
-  document.querySelector('#screen-map .map-header span').textContent = 
-    _mineOnly ? '👤 Mes signalements' : '🗺️ Carte partagée';
 
-  map = L.map('map', { center: [45.1, 5.7], zoom: 13, zoomControl: true, attributionControl: true });
+  map = L.map('map', { center: [45.1, 5.7], zoom: 13, zoomControl: true });
+  _obsLayer = L.layerGroup().addTo(map);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '© OpenStreetMap'
-  }).addTo(map);
+  applyBasemap(localStorage.getItem('vigienid_basemap') || 'osm');
+  addBasemapControl();
+  addDeclControl();
 
   refreshMap();
 }
 
 async function refreshMap() {
-  if (!map) return;
-
-  // Effacer anciens layers
-  map.eachLayer(l => { if (l._isSignal) map.removeLayer(l); });
-
-  const since = new Date();
-  since.setDate(since.getDate() - (pilotData?.validity_days || 7));
+  if (!map || !_obsLayer) return;
+  _obsLayer.clearLayers();
 
   try {
-    let query = sb
-      .from('chrono_frelon_geo')
-      .select('lat, lon, direction, distance, phone_id, created_at, id')
-      .gte('created_at', since.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(500);
+    let data, error;
 
-    if (_mineOnly) query = query.eq('phone_id', phoneId);
+    if (_mineOnly) {
+      // Mes signalements : requête directe filtrée par phone_id
+      const since = new Date();
+      since.setDate(since.getDate() - (pilotData?.validity_days || 30));
+      ({ data, error } = await sb
+        .from('chrono_frelon_geo')
+        .select('lat, lon, direction, distance, phone_id, created_at, id')
+        .eq('phone_id', phoneId)
+        .gte('created_at', since.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(200));
+    } else {
+      // Carte partagée : RPC get_nearby_frelons comme ChassNid
+      if (!myPos) {
+        showToast('⚠️ GPS requis pour la carte partagée', 'err', 4000);
+        return;
+      }
+      ({ data, error } = await sb.rpc('get_nearby_frelons', {
+        lat: myPos.lat,
+        lon: myPos.lon,
+        radius_m: 10000
+      }));
+    }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    if (!data?.length) { showToast('Aucun signalement récent', 'ok'); return; }
+    if (error) throw new Error(error.message);
+    if (!data?.length) { showToast('Aucun signalement dans ce secteur', 'ok'); return; }
 
     const bounds = [];
     data.forEach(s => {
+      if (s.lat == null || s.lon == null || s.direction == null) return;
+
       const isMine = s.phone_id === phoneId;
-      const color  = isMine ? '#2e7d32' : '#f5a623';
-      const length = s.distance || pilotData.trait_length_m;
-      const poly   = drawFuseau(s.lat, s.lon, s.direction, length, color);
-      poly._isSignal = true;
-      poly.addTo(map);
-      poly.bindPopup(`
+      const color  = isMine ? '#2e7d32' : 'red';
+      const dist   = s.distance || 1500;
+
+      // Déclinaison
+      let dir = (s.direction + _declinaison + 360) % 360;
+
+      // Point
+      L.circleMarker([s.lat, s.lon], {
+        radius: 6, color, fillColor: color, fillOpacity: 1
+      }).bindPopup(`
         <div style="font-size:13px;line-height:1.7">
           <b>${isMine ? '👤 Moi' : '👥 Sentinelle'}</b><br>
-          Dir: ${s.direction}° · ${length}m<br>
+          Dir: ${Math.round(dir)}° · ${Math.round(dist)}m<br>
           ${new Date(s.created_at).toLocaleString('fr-FR')}
-        </div>`);
+        </div>`).addTo(_obsLayer);
+
+      // Fuseau ±5°
+      const fuseauPts = buildFuseau(s.lat, s.lon, dir, dist, 5);
+      L.polygon(fuseauPts, {
+        color, weight: 1.5, opacity: 0.8,
+        fillColor: color, fillOpacity: 0.22,
+        dashArray: dist === 0 ? '6 6' : null,
+      }).addTo(_obsLayer);
+
       bounds.push([s.lat, s.lon]);
     });
 
-    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
+    if (bounds.length === 1) map.setView(bounds[0], 16);
+    else if (bounds.length > 1) map.fitBounds(L.latLngBounds(bounds), { padding: [30, 30] });
+
   } catch(e) {
     showToast('Erreur carte : ' + e.message, 'err');
   }
 }
 
-function degToRad(d) { return d * Math.PI / 180; }
-
-function destinationPoint(lat, lon, bearing, distM) {
-  const R = 6371000, d = distM / R, b = degToRad(bearing);
-  const φ1 = degToRad(lat), λ1 = degToRad(lon);
-  const φ2 = Math.asin(Math.sin(φ1)*Math.cos(d) + Math.cos(φ1)*Math.sin(d)*Math.cos(b));
-  const λ2 = λ1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(φ1), Math.cos(d)-Math.sin(φ1)*Math.sin(φ2));
-  return [φ2*180/Math.PI, λ2*180/Math.PI];
+function buildFuseau(lat, lon, bearing, lengthM, halfAngle) {
+  const steps = 8;
+  const pts = [[lat, lon]];
+  for (let i = 0; i <= steps; i++) {
+    const a = bearing - halfAngle + (2 * halfAngle * i / steps);
+    const d = destPoint(lat, lon, a, lengthM);
+    pts.push([d.lat, d.lon]);
+  }
+  pts.push([lat, lon]);
+  return pts;
 }
 
-function drawFuseau(lat, lon, az, lenM, color) {
-  const o = [lat, lon];
-  const l = destinationPoint(lat, lon, az - TRAIT_ANGLE, lenM);
-  const r = destinationPoint(lat, lon, az + TRAIT_ANGLE, lenM);
-  const t = destinationPoint(lat, lon, az, lenM);
-  return L.polygon([o, l, t, r, o], {
-    color, fillColor: color, fillOpacity: 0.4, weight: 1.5, opacity: 0.85
-  });
+function destPoint(lat, lon, bearing, distM) {
+  const R = 6371000, d = distM / R, b = bearing * Math.PI / 180;
+  const φ1 = lat * Math.PI / 180, λ1 = lon * Math.PI / 180;
+  const φ2 = Math.asin(Math.sin(φ1)*Math.cos(d) + Math.cos(φ1)*Math.sin(d)*Math.cos(b));
+  const λ2 = λ1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(φ1), Math.cos(d)-Math.sin(φ1)*Math.sin(φ2));
+  return { lat: φ2*180/Math.PI, lon: λ2*180/Math.PI };
 }
 
 // ════════════════════════════════════════════
