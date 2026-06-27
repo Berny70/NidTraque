@@ -568,20 +568,42 @@ function startCompass() {
 }
 
 function bindCompass() {
-  window.addEventListener('deviceorientationabsolute', onOrientation, true);
-  window.addEventListener('deviceorientation',         onOrientation, true);
+  // Tester d'abord deviceorientationabsolute (Android)
+  let usingAbsolute = false;
+
+  window.addEventListener('deviceorientationabsolute', e => {
+    if (e.alpha === null) return;
+    usingAbsolute = true;
+    const deg = (360 - e.alpha) % 360;
+    onCompassValue(Math.round(deg));
+  }, true);
+
+  // deviceorientation seulement si pas d'événement absolu (iOS)
+  setTimeout(() => {
+    if (!usingAbsolute) {
+      window.addEventListener('deviceorientation', e => {
+        let deg = null;
+        if (e.webkitCompassHeading != null) {
+          deg = e.webkitCompassHeading; // iOS
+        } else if (e.alpha != null) {
+          deg = (360 - e.alpha) % 360;  // fallback
+        }
+        if (deg !== null) onCompassValue(Math.round(deg));
+      }, true);
+    }
+  }, 1000);
 }
 
-function onOrientation(e) {
-  let deg = null;
-  if (e.webkitCompassHeading != null)       deg = e.webkitCompassHeading;
-  else if (e.absolute && e.alpha != null)   deg = (360 - e.alpha) % 360;
-  else if (e.alpha != null)                 deg = (360 - e.alpha) % 360;
-  if (deg === null) return;
+// Lissage léger : moyenne glissante sur 5 valeurs
+const _smoothBuf = [];
+function onCompassValue(deg) {
+  _smoothBuf.push(deg);
+  if (_smoothBuf.length > 5) _smoothBuf.shift();
 
-  liveAzimuth = Math.round(deg);
+  const sinS = _smoothBuf.reduce((s, d) => s + Math.sin(d * Math.PI/180), 0);
+  const cosS = _smoothBuf.reduce((s, d) => s + Math.cos(d * Math.PI/180), 0);
+  liveAzimuth = Math.round((Math.atan2(sinS, cosS) * 180/Math.PI + 360) % 360);
 
-  // Mettre à jour flèche si pas verrouillée
   if (lockedAzimuth === null) {
     updateArrow(liveAzimuth);
     document.getElementById('disp-dir').textContent     = 'Dir: ' + liveAzimuth + ' deg';
