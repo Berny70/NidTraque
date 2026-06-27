@@ -273,8 +273,11 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); over
   <!-- header -->
   <div class="header">
     <div style="position:relative;text-align:center;margin-bottom:8px;">
-      <div class="header-title" style="margin-bottom:0;">VigieNid <span class="header-version">V 1.1</span></div>
-      <button id="btn-share" onclick="showQR()" style="display:none;position:absolute;right:0;top:0;background:none;border:none;font-size:22px;cursor:pointer;padding:2px 6px;line-height:1;" title="Partager l'application">📲</button>
+      <div class="header-title" style="margin-bottom:0;">VigieNid <span class="header-version">V 1.05</span></div>
+      <div style="position:absolute;right:0;top:0;display:flex;gap:2px;">
+        <button onclick="showSettings()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;" title="Paramètres">⚙️</button>
+        <button id="btn-share" onclick="showQR()" style="display:none;background:none;border:none;font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;" title="Partager l'application">📲</button>
+      </div>
     </div>
     <div class="header-grid">
       <div class="header-label">Admin.</div>
@@ -558,6 +561,15 @@ function updatePosDisplay(pos) {
 }
 
 function lockGPS() {
+  if (lockedPos) {
+    // décocher
+    lockedPos = null;
+    const btn = document.getElementById('btn-gps');
+    btn.textContent = 'Position';
+    btn.classList.remove('locked');
+    checkReady();
+    return;
+  }
   if (!livePos) { showToast('⚠️ GPS non disponible', 'err'); return; }
   lockedPos = { ...livePos };
   updatePosDisplay(lockedPos);
@@ -637,6 +649,16 @@ function updateArrow(deg) {
 }
 
 function lockCompass() {
+  if (lockedAzimuth !== null) {
+    // décocher
+    lockedAzimuth = null;
+    const btn = document.getElementById('btn-compass');
+    btn.textContent = 'Boussole';
+    btn.classList.remove('locked');
+    document.getElementById('disp-dir-sub').textContent = 'live boussole';
+    checkReady();
+    return;
+  }
   if (liveAzimuth === null) { showToast('⚠️ Boussole non disponible', 'err'); return; }
   lockedAzimuth = liveAzimuth;
   updateArrow(lockedAzimuth);
@@ -659,12 +681,13 @@ async function doSignal() {
   btn.disabled   = true;
   btn.textContent = 'Envoi en cours…';
 
+  const traitLen = localTraitLength || pilotData?.trait_length_m || 800;
   const payload = {
     phone_id:  phoneId,
     lat:       lockedPos.lat,
     lon:       lockedPos.lon,
     direction: lockedAzimuth,
-    distance:  pilotData.trait_length_m || 800,
+    distance:  traitLen,
   };
 
   try {
@@ -851,7 +874,7 @@ async function refreshMap() {
         </div>`).addTo(_obsLayer);
 
       // Fuseau ±5°
-      const fuseauPts = buildFuseau(s.lat, s.lon, dir, dist, 5);
+      const fuseauPts = buildFuseau(s.lat, s.lon, dir, dist, localTraitAngle || 5);
       L.polygon(fuseauPts, {
         color, weight: 1.5, opacity: 0.8,
         fillColor: color, fillOpacity: 0.22,
@@ -861,8 +884,21 @@ async function refreshMap() {
       bounds.push([s.lat, s.lon]);
     });
 
-    if (bounds.length === 1) map.setView(bounds[0], 16);
-    else if (bounds.length > 1) map.fitBounds(L.latLngBounds(bounds), { padding: [30, 30] });
+    if (_mineOnly) {
+      // Zoom niveau commune (~4km²) centré sur mes signalements
+      if (bounds.length === 1) map.setView(bounds[0], 14);
+      else if (bounds.length > 1) {
+        const b = L.latLngBounds(bounds);
+        map.fitBounds(b, { padding: [50, 50], maxZoom: 14 });
+      }
+    } else {
+      // Carte partagée : zoom plus large centré sur tous les signalements
+      if (bounds.length === 1) map.setView(bounds[0], 13);
+      else if (bounds.length > 1) {
+        const b = L.latLngBounds(bounds);
+        map.fitBounds(b, { padding: [40, 40], maxZoom: 13 });
+      }
+    }
 
   } catch(e) {
     showToast('Erreur carte : ' + e.message, 'err');
@@ -912,9 +948,76 @@ function showQR() {
 }
 
 // ════════════════════════════════════════════
+//  PARAMÈTRES
+// ════════════════════════════════════════════
+let localTraitLength = null; // override local (null = valeur pilote)
+let localTraitAngle  = parseInt(localStorage.getItem('vigienid_angle') || '5');
+
+function showSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  overlay.style.display = 'flex';
+
+  // Pseudo
+  document.getElementById('set-pseudo').value = pseudoName || '';
+
+  // Longueur
+  const len = localTraitLength || pilotData?.trait_length_m || 800;
+  const sliderLen = document.getElementById('set-length');
+  sliderLen.value = len;
+  document.getElementById('set-length-val').textContent = len + 'm';
+
+  // Angle
+  const ang = localTraitAngle || 5;
+  const sliderAng = document.getElementById('set-angle');
+  sliderAng.value = ang;
+  document.getElementById('set-angle-val').textContent = '±' + ang + '°';
+}
+
+async function saveSettings() {
+  const newPseudo = document.getElementById('set-pseudo').value.trim();
+  const newLength = parseInt(document.getElementById('set-length').value);
+  const newAngle  = parseInt(document.getElementById('set-angle').value);
+
+  // Sauvegarder localement
+  localTraitLength = newLength;
+  localTraitAngle  = newAngle;
+  localStorage.setItem('vigienid_angle', newAngle);
+  localStorage.setItem('vigienid_length', newLength);
+
+  // Mettre à jour pseudo en base si changé
+  if (newPseudo && newPseudo !== pseudoName) {
+    try {
+      const { error } = await sb.rpc('chassnid_sentinel_set_pseudo', {
+        p_phone_id: phoneId,
+        p_pseudo:   newPseudo
+      });
+      if (!error) {
+        pseudoName = newPseudo;
+        document.getElementById('hdr-sentinel').textContent = pseudoName;
+        showToast('✅ Pseudo mis à jour', 'ok');
+      } else {
+        showToast('⚠️ Pseudo non mis à jour : ' + error.message, 'err', 4000);
+      }
+    } catch(e) {
+      showToast('⚠️ ' + e.message, 'err', 4000);
+    }
+  }
+
+  document.getElementById('settings-overlay').style.display = 'none';
+  showToast('✅ Paramètres enregistrés', 'ok');
+}
+
+// ════════════════════════════════════════════
 //  START
 // ════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('DOMContentLoaded', () => {
+  // Charger overrides locaux
+  const savedLen = localStorage.getItem('vigienid_length');
+  const savedAng = localStorage.getItem('vigienid_angle');
+  if (savedLen) localTraitLength = parseInt(savedLen);
+  if (savedAng) localTraitAngle  = parseInt(savedAng);
+  init();
+});
 </script>
 </body>
 </html>
