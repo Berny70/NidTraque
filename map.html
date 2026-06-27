@@ -100,9 +100,7 @@
   ⬅ <span data-i18n="back">Retour</span>
 </button>
 
-<button id="btnCaptMap" style="position:absolute;top:12px;right:12px;z-index:1000;background:#c8a44a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.25)">
-  📸 Capture
-</button>
+
 
 <div id="map"></div>
 
@@ -136,38 +134,8 @@
 <!-- Carte -->
 <script src="./map.js"></script>
 
-<!-- Capture d'écran de la carte -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script>
-document.getElementById("btnCaptMap")?.addEventListener("click", async () => {
-  const btn = document.getElementById("btnCaptMap");
-  btn.disabled = true;
-  btn.textContent = "⏳ ...";
 
-  try {
-    const canvas = await html2canvas(document.getElementById("map"), {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-    });
 
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-    const filename = "ChassNid_carte_" + new Date().toISOString().replace(/[:.]/g, "-") + ".png";
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch (e) {
-    alert("Capture impossible : " + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "📸 Capture";
-  }
-});
-</script>
 
 </body>
 </html>

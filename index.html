@@ -157,14 +157,17 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
 <!-- HEADER -->
 <div class="header">
   <div class="header-title-row">
-    <div class="header-title">VigieNid <span class="header-version">V 1.0</span></div>
+    <div class="header-title">VigieNid</div>
     <button id="btn-share" class="header-share-btn" onclick="showQR()" title="Partager">📲</button>
   </div>
   <div class="header-grid">
     <div class="header-label">Admin.</div>
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div class="header-value" id="hdr-admin">—</div>
-      <div class="header-authors">Barrois-Lambour</div>
+      <div style="text-align:right;">
+        <div class="header-authors">Barrois-Lambour</div>
+        <div class="header-version" style="font-size:10px;color:#4a7090;">V 1.0</div>
+      </div>
     </div>
     <div class="header-label">Territoire</div>
     <div class="header-value territory" id="hdr-territoire">—</div>
