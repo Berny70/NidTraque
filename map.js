@@ -185,6 +185,20 @@ function afficherObservations() {
     const halfAngle = parseInt(localStorage.getItem("vigienid_angle") || "5");
     const fuseauPoints = buildFuseau(obs.lat, obs.lon, direction, fuseauLength, halfAngle);
 
+    const dateStr   = obs.created_at ? new Date(obs.created_at).toLocaleString('fr-FR') : '—';
+    const destStr   = obs.destination   ? `<br>🌿 ${obs.destination}`   : '';
+    const freqStr   = obs.frequentation ? `<br>🐝 ${obs.frequentation}` : '';
+    const isMine    = obs.phone_id === localStorage.getItem('phone_id');
+    const pseudoStr = isMine ? '👤 Moi' : `📱 ${(obs.phone_id||'').substring(0,8)}…`;
+
+    const popup = `<div style="font-size:13px;line-height:1.8;min-width:160px">
+      <b>${pseudoStr}</b><br>
+      📅 ${dateStr}<br>
+      📍 ${(obs.lat||0).toFixed(5)}, ${(obs.lon||0).toFixed(5)}<br>
+      🧭 ${Math.round(direction)}° · ${Math.round(fuseauLength)}m
+      ${destStr}${freqStr}
+    </div>`;
+
     L.polygon(fuseauPoints, {
       color,
       weight:      1.5,
@@ -192,7 +206,7 @@ function afficherObservations() {
       fillColor:   color,
       fillOpacity: 0.22,
       dashArray:   distance === 0 ? "6 6" : null,
-    }).addTo(observationsLayer);
+    }).bindPopup(popup, { maxWidth: 220 }).addTo(observationsLayer);
 
   }); // ✅ FIN DU forEach
 }     // ✅ FIN DE afficherObservations
