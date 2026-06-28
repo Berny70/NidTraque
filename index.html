@@ -395,15 +395,15 @@ window.saveSettings = function() {
 };
 
 // Sélection boutons tags
-let _destination    = null;
-let _frequentation  = null;
+window._destination    = null;
+window._frequentation  = null;
 
 window.selectTag = function(btn, group) {
   const grp = document.getElementById('grp-' + group);
   grp.querySelectorAll('.btn-tag').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  if (group === 'destination')   _destination   = btn.dataset.val;
-  if (group === 'frequentation') _frequentation = btn.dataset.val;
+  if (group === 'destination')   window._destination   = btn.dataset.val;
+  if (group === 'frequentation') window._frequentation = btn.dataset.val;
 };
 
 window.editPseudo = async function() {
