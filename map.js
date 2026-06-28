@@ -3,6 +3,7 @@
 // ==========================
 const mapSearchParams = new URLSearchParams(window.location.search);
 const MODE_SHARED = mapSearchParams.get("mode") === "shared";
+const MODE_MINE   = mapSearchParams.get("mode") === "mine";
 
 const _savedDecl = localStorage.getItem("declinaison");
 let declinaison = _savedDecl !== null ? (parseFloat(_savedDecl) || 3) : 3;
@@ -59,9 +60,13 @@ applyBasemap(localStorage.getItem('chassnid_basemap') || 'osm');
 addBasemapControl();
 
 // ==========================
-// MODE LOCAL
+// MODE LOCAL / MES SIGNALEMENTS
 // ==========================
 if (!MODE_SHARED) {
+  if (MODE_MINE) {
+    // Charger mes signalements depuis Supabase
+    chargerMesSignalements();
+  } else {
   observations = JSON.parse(
     localStorage.getItem("chronoObservations") || "[]"
   );
@@ -85,6 +90,7 @@ if (!MODE_SHARED) {
     centrerCarte(observations);
     afficherObservations();
   }
+  } // fin else MODE_MINE
 }
 
 // ==========================
@@ -235,6 +241,41 @@ async function chargerDonneesAutour(lat, lon) {
   }
 
   return data || [];
+}
+
+// ==========================
+// MES SIGNALEMENTS
+// ==========================
+async function chargerMesSignalements() {
+  const phoneId = localStorage.getItem('phone_id');
+  if (!phoneId || !window.supabaseClient) {
+    map.setView([46.5, 2.5], 6);
+    return;
+  }
+
+  const { data, error } = await window.supabaseClient
+    .from('chrono_frelon_geo')
+    .select('*')
+    .eq('phone_id', phoneId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error || !data?.length) {
+    alert('Aucun signalement trouvé pour votre appareil.');
+    map.setView([46.5, 2.5], 6);
+    return;
+  }
+
+  observations = data.map(o => ({ ...o, distance: o.distance || 0 }));
+  afficherObservations();
+
+  // Zoom niveau commune (~14) centré sur les signalements
+  const points = observations.filter(o => o.lat && o.lon).map(o => [o.lat, o.lon]);
+  if (points.length === 1) {
+    map.setView(points[0], 14);
+  } else if (points.length > 1) {
+    map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 14 });
+  }
 }
 
 // ==========================
