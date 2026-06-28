@@ -117,6 +117,16 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
 .btn-sec.danger { border-color: var(--red); color: var(--red); }
 .btn-sec.danger:active { background: #fdecea; }
 
+.btn-tag {
+  padding: 7px 10px; border-radius: 99px;
+  border: 2px solid var(--border); background: #f0f4f8;
+  color: var(--navy); font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-tag.selected {
+  background: #2d5a27; color: #fff; border-color: #2d5a27;
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
@@ -218,6 +228,24 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
       <button class="btn-compass-lock" id="btn-compass" onclick="lockCompass()">Boussole</button>
     </div>
 
+  </div>
+
+  <!-- Boutons optionnels -->
+  <div style="background:#fff;border:2px solid var(--border);border-radius:var(--radius);padding:10px 12px;">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">Ce que j'ai vu partir vers</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;" id="grp-destination">
+      <button class="btn-tag" data-val="grands-arbres" onclick="selectTag(this,'destination')">🌳 Grands arbres</button>
+      <button class="btn-tag" data-val="foret"         onclick="selectTag(this,'destination')">🌲 Forêt</button>
+      <button class="btn-tag" data-val="buisson"       onclick="selectTag(this,'destination')">🌿 Buisson</button>
+      <button class="btn-tag" data-val="batiment"      onclick="selectTag(this,'destination')">🏠 Bâtiment</button>
+      <button class="btn-tag" data-val="pas-vu"        onclick="selectTag(this,'destination')">❓ Pas vu</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin:10px 0 8px;font-weight:600;">Fréquentation observée</div>
+    <div style="display:flex;gap:6px;" id="grp-frequentation">
+      <button class="btn-tag" data-val="1"   onclick="selectTag(this,'frequentation')">🐝 1 frelon</button>
+      <button class="btn-tag" data-val="2-3" onclick="selectTag(this,'frequentation')">🐝🐝 2–3</button>
+      <button class="btn-tag" data-val="5+"  onclick="selectTag(this,'frequentation')">🐝🐝🐝 5 et +</button>
+    </div>
   </div>
 
   <!-- Boutons action -->
@@ -364,6 +392,18 @@ window.saveSettings = function() {
   localStorage.setItem('vigienid_angle', ang);
   document.getElementById('settings-overlay').style.display = 'none';
   alert('✅ Paramètres enregistrés\nLongueur : ' + len + 'm · Angle : ±' + ang + '°');
+};
+
+// Sélection boutons tags
+let _destination    = null;
+let _frequentation  = null;
+
+window.selectTag = function(btn, group) {
+  const grp = document.getElementById('grp-' + group);
+  grp.querySelectorAll('.btn-tag').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if (group === 'destination')   _destination   = btn.dataset.val;
+  if (group === 'frequentation') _frequentation = btn.dataset.val;
 };
 
 window.editPseudo = async function() {

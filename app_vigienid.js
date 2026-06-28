@@ -200,6 +200,8 @@ window.doSignal = async function() {
 
   const phoneId = getPhoneId();
   const distance = parseInt(localStorage.getItem('vigienid_length') || '800');
+  const destination   = window._destination   || null;
+  const frequentation = window._frequentation || null;
 
   // Rattachement pilote
   const pilotId = localStorage.getItem('pilot_id') || DEFAULT_PILOT_ID;
@@ -213,11 +215,13 @@ window.doSignal = async function() {
   const { data, error } = await window.supabaseClient
     .from('chrono_frelon_geo')
     .insert([{
-      phone_id:  phoneId,
-      lat:       lockedPos.lat,
-      lon:       lockedPos.lon,
-      direction: lockedHeading,
-      distance:  distance,
+      phone_id:      phoneId,
+      lat:           lockedPos.lat,
+      lon:           lockedPos.lon,
+      direction:     lockedHeading,
+      distance:      distance,
+      destination:   destination,
+      frequentation: frequentation,
     }])
     .select('id')
     .single();
@@ -231,6 +235,9 @@ window.doSignal = async function() {
     lockedPos     = null;
     lockedHeading = null;
     compassActive = true;
+    window._destination   = null;
+    window._frequentation = null;
+    document.querySelectorAll('.btn-tag').forEach(b => b.classList.remove('selected'));
     const btnG = document.getElementById('btn-gps');
     if (btnG) { btnG.textContent = 'Position'; btnG.classList.remove('locked'); }
     const btnC = document.getElementById('btn-compass');
