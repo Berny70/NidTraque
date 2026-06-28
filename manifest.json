@@ -2,10 +2,12 @@
   "name": "VigieNid",
   "short_name": "VigieNid",
   "description": "Localisation collaborative de nids de frelons asiatiques",
-  "start_url": ".",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2d5a27",
+  "background_color": "#1b2d3e",
+  "theme_color": "#1b2d3e",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon_vigienid_192.png",
