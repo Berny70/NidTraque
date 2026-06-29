@@ -331,6 +331,43 @@ async function initAdminButton() {
 }
 
 // ==========================
+// RATTACHEMENT AUTOMATIQUE PILOTE
+// ==========================
+async function autoAttachPilot() {
+  if (!window.supabaseClient) return;
+
+  const phoneId = getPhoneId();
+  const pilotId = localStorage.getItem('pilot_id') || DEFAULT_PILOT_ID;
+
+  // Vérifier si ce phone_id correspond à un pilote dans admin_profiles
+  const { data: pilotProfile } = await window.supabaseClient
+    .from('admin_profiles')
+    .select('id, role, phone_id')
+    .eq('phone_id', phoneId)
+    .in('role', ['pilot', 'admin_dept', 'superadmin'])
+    .maybeSingle();
+
+  if (pilotProfile) {
+    // C'est un pilote — rattacher automatiquement à son propre secteur
+    const selfPilotId = pilotProfile.id;
+    await window.supabaseClient
+      .from('pilot_users')
+      .upsert({ pilot_id: selfPilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
+    localStorage.setItem('pilot_attached', '1');
+    console.log('[VigieNid] Pilote auto-rattaché :', selfPilotId);
+    return;
+  }
+
+  // Sentinelle normale — rattacher au pilote du QR code si pas encore fait
+  if (!localStorage.getItem('pilot_attached')) {
+    const { error } = await window.supabaseClient
+      .from('pilot_users')
+      .upsert({ pilot_id: pilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
+    if (!error) localStorage.setItem('pilot_attached', '1');
+  }
+}
+
+// ==========================
 // DÉMARRAGE
 // ==========================
 window.addEventListener('DOMContentLoaded', () => {
@@ -338,4 +375,5 @@ window.addEventListener('DOMContentLoaded', () => {
   startCompass();
   checkReady();
   initAdminButton();
+  autoAttachPilot();
 });
