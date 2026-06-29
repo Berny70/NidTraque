@@ -354,7 +354,26 @@ async function autoAttachPilot() {
       .from('pilot_users')
       .upsert({ pilot_id: selfPilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
     localStorage.setItem('pilot_attached', '1');
-    console.log('[VigieNid] Pilote auto-rattaché :', selfPilotId);
+    return;
+  }
+
+  // Vérifier si le pilote du QR code a ce phone_id déjà enregistré
+  // Sinon, mettre à jour son phone_id dans admin_profiles
+  const { data: pilotData } = await window.supabaseClient
+    .from('admin_profiles')
+    .select('id, phone_id')
+    .eq('id', pilotId)
+    .maybeSingle();
+
+  if (pilotData && !pilotData.phone_id) {
+    // Pilote sans phone_id — mettre à jour via RPC sécurisée
+    await window.supabaseClient
+      .rpc('vigienid_set_phone_id', { p_pilot_id: pilotId, p_phone_id: phoneId });
+    // Et rattacher à lui-même
+    await window.supabaseClient
+      .from('pilot_users')
+      .upsert({ pilot_id: pilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
+    localStorage.setItem('pilot_attached', '1');
     return;
   }
 
