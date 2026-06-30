@@ -386,31 +386,9 @@ async function autoAttachPilot() {
   }
 }
 
-// NOTE : le chargement de l'en-tête (Admin/Territoire/Pilote/Sentinelle)
-// est déjà géré par un script inline dans index.html.
-// editPseudo() reste nécessaire car le bouton ✏️ l'appelle et elle
-// n'existait nulle part ailleurs.
-function editPseudo() {
-  const current = localStorage.getItem('my_pseudo') || '';
-  const val = prompt('Votre pseudo (visible par votre pilote) :', current);
-  if (val === null) return; // annulé
-
-  const trimmed = val.trim();
-  const pilotId = localStorage.getItem('pilot_id') || DEFAULT_PILOT_ID;
-  const phoneId = getPhoneId();
-
-  localStorage.setItem('my_pseudo', trimmed);
-  const elSentinel = document.getElementById('hdr-sentinel');
-  if (elSentinel) elSentinel.textContent = trimmed || '—';
-
-  if (window.supabaseClient) {
-    window.supabaseClient.rpc('chassnid_sentinel_set_pseudo', {
-      p_phone_id: phoneId,
-      p_pilot_id: pilotId,
-      p_pseudo:   trimmed,
-    });
-  }
-}
+// NOTE : l'en-tête (Admin/Territoire/Pilote/Sentinelle) et l'édition
+// du pseudo (editPseudo, bouton ✏️) sont gérés par le script inline
+// dans index.html — pas dupliqués ici pour éviter tout conflit.
 
 // ==========================
 // DÉMARRAGE

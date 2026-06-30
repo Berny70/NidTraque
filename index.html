@@ -417,9 +417,11 @@ window.editPseudo = async function() {
   const newPseudo = prompt('Votre pseudo sentinelle :', current);
   if (!newPseudo || newPseudo.trim() === current) return;
   const phoneId = localStorage.getItem('phone_id');
-  if (!phoneId || !window.supabaseClient) return;
+  const pilotId = localStorage.getItem('pilot_id');
+  if (!phoneId || !pilotId || !window.supabaseClient) return;
   const { error } = await window.supabaseClient.rpc('chassnid_sentinel_set_pseudo', {
     p_phone_id: phoneId,
+    p_pilot_id: pilotId,
     p_pseudo:   newPseudo.trim()
   });
   if (!error) {
