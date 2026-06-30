@@ -349,19 +349,12 @@ window.showQR = function() {
   }
 };
 
-// ==========================
-// BOUTON ADMIN
-// ==========================
-async function initAdminButton() {
-  const pilotId = localStorage.getItem('pilot_id');
-  if (!pilotId || !window.supabaseClient) return;
-  const { data } = await window.supabaseClient
-    .rpc('chassnid_is_admin', { p_pilot_id: pilotId });
-  if (data === true) {
-    const btn = document.getElementById('btn-share');
-    if (btn) btn.style.display = 'block';
-  }
-}
+// NOTE : l'affichage de btn-share / btn-settings est géré par le
+// script inline dans index.html, qui compare correctement
+// pilot.phone_id === phoneId (l'identité du visiteur, pas le rôle
+// du pilote affiché dans l'URL). initAdminButton() faisait la même
+// vérification de façon incorrecte (chassnid_is_admin sur le pilote
+// de l'URL, sans rapport avec qui regarde la page) — supprimée.
 
 // ==========================
 // RATTACHEMENT AUTOMATIQUE PILOTE
@@ -430,6 +423,5 @@ window.addEventListener('DOMContentLoaded', () => {
   startGPS();
   startCompass();
   checkReady();
-  initAdminButton();
   autoAttachPilot();
 });
