@@ -60,10 +60,19 @@ self.addEventListener("fetch", event => {
         // Hors ligne : servir depuis le cache
         return caches.match(req).then(cached => {
           if (cached) return cached;
-          // Fallback ultime : page d'accueil
+          // Fallback : page d'accueil pour une navigation
           if (req.destination === "document") {
-            return caches.match("./index.html");
+            return caches.match("./index.html").then(home => {
+              if (home) return home;
+              return new Response(
+                "Hors ligne — page non disponible en cache.",
+                { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+              );
+            });
           }
+          // Fallback ultime pour toute autre requête (JSON, police, etc.)
+          // event.respondWith() exige toujours une vraie Response.
+          return new Response("", { status: 504, statusText: "Network error (offline)" });
         });
       })
   );
