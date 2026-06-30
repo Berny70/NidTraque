@@ -387,6 +387,84 @@ async function autoAttachPilot() {
 }
 
 // ==========================
+// EN-TÊTE : Admin / Territoire / Pilote / Sentinelle
+// ==========================
+async function loadHeaderInfo() {
+  if (!window.supabaseClient) return;
+
+  const pilotId = localStorage.getItem('pilot_id') || DEFAULT_PILOT_ID;
+  const phoneId = getPhoneId();
+
+  // Infos du pilote rattaché
+  const { data: pilot } = await window.supabaseClient
+    .from('admin_profiles')
+    .select('id, nom, prenom, secteur, parent_id')
+    .eq('id', pilotId)
+    .maybeSingle();
+
+  if (pilot) {
+    const elPilote = document.getElementById('hdr-pilote');
+    const elTerritoire = document.getElementById('hdr-territoire');
+    if (elPilote)     elPilote.textContent     = `${pilot.prenom || ''} ${pilot.nom || ''}`.trim() || '—';
+    if (elTerritoire) elTerritoire.textContent = pilot.secteur || '—';
+
+    // Remonter à l'admin parent (admin_dept ou superadmin)
+    if (pilot.parent_id) {
+      const { data: admin } = await window.supabaseClient
+        .from('admin_profiles')
+        .select('nom, prenom')
+        .eq('id', pilot.parent_id)
+        .maybeSingle();
+      const elAdmin = document.getElementById('hdr-admin');
+      if (admin && elAdmin) {
+        elAdmin.textContent = `${admin.prenom || ''} ${admin.nom || ''}`.trim() || '—';
+      }
+    }
+  }
+
+  // Pseudo sentinelle (déjà enregistré ou stocké en local)
+  const elSentinel = document.getElementById('hdr-sentinel');
+  if (elSentinel) {
+    const localPseudo = localStorage.getItem('my_pseudo');
+    if (localPseudo) {
+      elSentinel.textContent = localPseudo;
+    } else {
+      const { data: stats } = await window.supabaseClient
+        .from('pilot_user_stats')
+        .select('pseudo')
+        .eq('phone_id', phoneId)
+        .maybeSingle();
+      if (stats && stats.pseudo) {
+        elSentinel.textContent = stats.pseudo;
+        localStorage.setItem('my_pseudo', stats.pseudo);
+      }
+    }
+  }
+}
+
+function editPseudo() {
+  const current = localStorage.getItem('my_pseudo') || '';
+  const val = prompt('Votre pseudo (visible par votre pilote) :', current);
+  if (val === null) return; // annulé
+
+  const trimmed = val.trim();
+  const pilotId = localStorage.getItem('pilot_id') || DEFAULT_PILOT_ID;
+  const phoneId = getPhoneId();
+
+  localStorage.setItem('my_pseudo', trimmed);
+  const elSentinel = document.getElementById('hdr-sentinel');
+  if (elSentinel) elSentinel.textContent = trimmed || '—';
+
+  if (window.supabaseClient) {
+    window.supabaseClient.rpc('chassnid_sentinel_set_pseudo', {
+      p_phone_id: phoneId,
+      p_pilot_id: pilotId,
+      p_pseudo:   trimmed,
+    });
+  }
+}
+
+// ==========================
 // DÉMARRAGE
 // ==========================
 window.addEventListener('DOMContentLoaded', () => {
@@ -394,5 +472,5 @@ window.addEventListener('DOMContentLoaded', () => {
   startCompass();
   checkReady();
   initAdminButton();
-  autoAttachPilot();
+  autoAttachPilot().then(loadHeaderInfo);
 });
