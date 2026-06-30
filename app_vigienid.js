@@ -22,6 +22,21 @@ let lockedPos  = null;       // GPS verrouillé
 let lastSignalId = null;
 
 // ==========================
+// COOKIES (persistance partagée Safari ↔ PWA installée sur iOS)
+// localStorage est cloisonné entre Safari et une PWA installée sur
+// iOS (limitation Apple), donc on duplique pilot_id dans un cookie,
+// qui lui reste partagé entre les deux contextes.
+// ==========================
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+// ==========================
 // INIT PILOT ID (QR CODE)
 // ==========================
 (function initPilotId() {
@@ -29,9 +44,19 @@ let lastSignalId = null;
   const pilotParam = params.get('pilot');
   if (pilotParam) {
     localStorage.setItem('pilot_id', pilotParam);
+    setCookie('pilot_id', pilotParam, 365);
     localStorage.removeItem('pilot_attached');
   } else if (!localStorage.getItem('pilot_id')) {
-    localStorage.setItem('pilot_id', DEFAULT_PILOT_ID);
+    // Pas de paramètre dans l'URL et rien en localStorage : cas
+    // typique d'une PWA installée sur iOS qui ne voit pas le
+    // localStorage rempli depuis Safari. On retombe sur le cookie
+    // (partagé) avant de retomber sur le pilote par défaut.
+    const cookiePilot = getCookie('pilot_id');
+    localStorage.setItem('pilot_id', cookiePilot || DEFAULT_PILOT_ID);
+  } else {
+    // localStorage déjà rempli : on s'assure que le cookie est
+    // synchronisé pour les futures installations PWA.
+    setCookie('pilot_id', localStorage.getItem('pilot_id'), 365);
   }
 })();
 
