@@ -66,9 +66,17 @@ function getCookie(name) {
 function getPhoneId() {
   let id = localStorage.getItem('phone_id');
   if (!id) {
-    id = crypto.randomUUID();
+    // localStorage vide (typiquement : PWA fraîchement installée sur
+    // iOS, isolée du localStorage Safari) — on tente le cookie avant
+    // de générer un nouvel identifiant aléatoire, pour ne pas perdre
+    // le rattachement existant (pseudo, historique, etc.)
+    id = getCookie('phone_id');
+    if (!id) {
+      id = crypto.randomUUID();
+    }
     localStorage.setItem('phone_id', id);
   }
+  setCookie('phone_id', id, 365);
   return id;
 }
 

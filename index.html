@@ -361,7 +361,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Pseudo sentinelle
-  const phoneId = localStorage.getItem('phone_id');
+  const phoneId = (typeof getPhoneId === 'function') ? getPhoneId() : localStorage.getItem('phone_id');
   if (phoneId) {
     const { data: ps } = await window.supabaseClient
       .from('pilot_user_stats')
@@ -416,7 +416,7 @@ window.editPseudo = async function() {
   const current = document.getElementById('hdr-sentinel').textContent;
   const newPseudo = prompt('Votre pseudo sentinelle :', current);
   if (!newPseudo || newPseudo.trim() === current) return;
-  const phoneId = localStorage.getItem('phone_id');
+  const phoneId = (typeof getPhoneId === 'function') ? getPhoneId() : localStorage.getItem('phone_id');
   const pilotId = localStorage.getItem('pilot_id');
   if (!phoneId || !pilotId || !window.supabaseClient) return;
   const { error } = await window.supabaseClient.rpc('chassnid_sentinel_set_pseudo', {
