@@ -372,9 +372,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('hdr-sentinel').textContent = ps?.pseudo || phoneId.slice(0, 10);
   }
 
-  // Bouton partage si admin
-  if (pilot.phone_id === phoneId ||
-      ['pilot','admin_dept','superadmin'].includes(pilot.role)) {
+  // Bouton partage/paramètres : uniquement si la personne connectée
+  // EST elle-même ce pilote (son propre phone_id correspond), pas
+  // simplement parce que le pilote affiché a le rôle 'pilot'.
+  if (pilot.phone_id === phoneId) {
     document.getElementById('btn-share').style.display = 'block';
     document.getElementById('btn-settings').style.display = 'block';
   }
