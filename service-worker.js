@@ -4,8 +4,8 @@
    (aligné sur le modèle Pot à Mèche / Chrono_Frelon)
    ========================== */
 
-const APP_VERSION = "1.6.1";
-const CACHE_NAME  = "vigienid-v1.6.1";
+const APP_VERSION = "1.6.2";
+const CACHE_NAME  = "vigienid-v1.6.2";
 
 /* ==========================
    INSTALL — on ne précache rien,
