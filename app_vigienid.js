@@ -121,6 +121,28 @@ window.lockGPS = function() {
 // ==========================
 // BOUSSOLE (identique Pot à Mèche)
 // ==========================
+// ==========================
+// CALIBRATION BOUSSOLE
+// ==========================
+function showCalibrationHint() {
+  let el = document.getElementById('compass-calib-hint');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'compass-calib-hint';
+    el.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);' +
+      'background:#f39c12;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;' +
+      'z-index:9999;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+    el.innerHTML = '🧭 Boussole imprécise — faire un "8" avec le téléphone';
+    document.body.appendChild(el);
+  }
+  el.style.display = 'block';
+}
+
+function hideCalibrationHint() {
+  const el = document.getElementById('compass-calib-hint');
+  if (el) el.style.display = 'none';
+}
+
 function startCompass() {
   if (typeof DeviceOrientationEvent !== 'undefined' &&
       typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -161,6 +183,13 @@ function onOrientation(e) {
   let heading = null;
   if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
     heading = e.webkitCompassHeading;
+    // Vérifier la précision de calibration iOS
+    const accuracy = e.webkitCompassAccuracy;
+    if (typeof accuracy === 'number' && accuracy > 25) {
+      showCalibrationHint();
+    } else {
+      hideCalibrationHint();
+    }
   } else if (e.absolute === true && typeof e.alpha === 'number') {
     heading = (360 - e.alpha) % 360;
   }
