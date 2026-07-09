@@ -448,9 +448,78 @@ async function autoAttachPilot() {
 // ==========================
 // DÉMARRAGE
 // ==========================
+
+// ==========================
+// RATTACHEMENT PAR CODE 4 CHIFFRES
+// ==========================
+
+// Afficher la section code si pas encore rattaché
+function checkShowCodeSection() {
+  const attached = getCookie('pilot_attached') || localStorage.getItem('pilot_attached');
+  if (!attached) {
+    const el = document.getElementById('code-rattachement-section');
+    if (el) el.style.display = 'block';
+  }
+}
+
+window.rattacherParCode = async function() {
+  const input = document.getElementById('input-code-rattach');
+  const msg = document.getElementById('code-rattach-msg');
+  const code = input.value.trim();
+
+  if (code.length !== 4) {
+    msg.textContent = 'Entrez exactement 4 chiffres.';
+    msg.style.color = '#c00';
+    return;
+  }
+
+  msg.textContent = 'Vérification…';
+  msg.style.color = '#666';
+
+  const { data: row, error } = await window.supabaseClient
+    .from('pilot_codes')
+    .select('id, pilot_id')
+    .eq('code', code)
+    .eq('used', false)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (error || !row) {
+    msg.textContent = 'Code invalide ou expiré.';
+    msg.style.color = '#c00';
+    return;
+  }
+
+  const phoneId = getPhoneId();
+  const { error: err2 } = await window.supabaseClient
+    .from('pilot_users')
+    .upsert({ pilot_id: row.pilot_id, phone_id: phoneId }, { onConflict: 'phone_id' });
+
+  if (err2) {
+    msg.textContent = 'Erreur de rattachement.';
+    msg.style.color = '#c00';
+    return;
+  }
+
+  await window.supabaseClient
+    .from('pilot_codes')
+    .update({ used: true })
+    .eq('id', row.id);
+
+  localStorage.setItem('pilot_id', row.pilot_id);
+  setCookie('pilot_id', row.pilot_id, 365);
+  localStorage.setItem('pilot_attached', 'true');
+  setCookie('pilot_attached', 'true', 365);
+
+  document.getElementById('code-rattachement-section').style.display = 'none';
+  msg.textContent = '';
+  alert('Rattachement reussi ! Rechargez la page.');
+};
+
 window.addEventListener('DOMContentLoaded', () => {
   startGPS();
   startCompass();
   checkReady();
   autoAttachPilot();
+  checkShowCodeSection();
 });
