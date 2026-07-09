@@ -484,8 +484,9 @@ window.rattacherParCode = async function() {
     .gt('expires_at', new Date().toISOString())
     .maybeSingle();
 
+  console.log('pilot_codes result:', JSON.stringify({data: row, error}));
   if (error || !row) {
-    msg.textContent = 'Code invalide ou expiré.';
+    msg.textContent = 'Code invalide ou expiré. (' + (error?.message || 'non trouvé') + ')';
     msg.style.color = '#c00';
     return;
   }
