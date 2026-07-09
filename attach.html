@@ -8,45 +8,72 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f0f4f0; padding: 1rem; }
     .card { background: white; border-radius: 20px; padding: 2rem; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.12); max-width: 320px; width: 100%; }
-    .logo { font-size: 48px; margin-bottom: 1rem; }
-    h2 { color: #2d6a2d; font-size: 22px; margin-bottom: 0.5rem; }
-    .status { color: #666; font-size: 14px; margin: 1rem 0; padding: 0.75rem; border-radius: 10px; background: #f0f8f0; }
-    .btn { display: block; width: 100%; padding: 1rem; background: #2d6a2d; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; text-decoration: none; margin-top: 1.5rem; }
+    .logo { font-size: 48px; margin-bottom: 0.5rem; }
+    h2 { color: #2d6a2d; font-size: 22px; margin-bottom: 0.25rem; }
+    .subtitle { color: #888; font-size: 13px; margin-bottom: 1.5rem; }
+    .code-box { background: #f0f8f0; border: 2px solid #2d6a2d; border-radius: 16px; padding: 1.5rem; margin: 1rem 0; }
+    .code-label { font-size: 12px; color: #666; margin-bottom: 0.5rem; }
+    .code-digits { font-size: 56px; font-weight: 900; letter-spacing: 12px; color: #2d6a2d; font-family: monospace; }
+    .code-hint { font-size: 11px; color: #999; margin-top: 0.5rem; }
+    .btn { display: block; width: 100%; padding: 1rem; background: #2d6a2d; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; margin-top: 1rem; }
     .btn:active { background: #1e4d1e; }
-    .error { color: #c00; background: #fff0f0; }
+    .btn-secondary { background: #f0f0f0; color: #333; margin-top: 0.5rem; font-size: 14px; padding: 0.75rem; }
+    .error { color: #c00; background: #fff0f0; border-radius: 10px; padding: 1rem; }
+    .steps { text-align: left; font-size: 13px; color: #555; margin-top: 1rem; line-height: 1.8; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="logo">🐝</div>
     <h2>VigieNid</h2>
-    <div class="status" id="status">Rattachement au pilote…</div>
-    <a class="btn" id="btn-open" href="#" style="display:none">Ouvrir VigieNid</a>
+    <p class="subtitle">Rattachement sentinelle</p>
+
+    <div id="content-ok" style="display:none">
+      <div class="code-box">
+        <div class="code-label">Votre code de rattachement</div>
+        <div class="code-digits" id="code-display"></div>
+        <div class="code-hint">Valable 30 minutes</div>
+      </div>
+      <div class="steps">
+        <strong>Comment procéder :</strong><br>
+        1️⃣ Ouvrez VigieNid<br>
+        2️⃣ Entrez ce code dans le champ prévu<br>
+        3️⃣ Appuyez sur <strong>OK</strong>
+      </div>
+      <a class="btn" id="btn-open" href="#">Ouvrir VigieNid</a>
+    </div>
+
+    <div id="content-nocode" style="display:none">
+      <p style="color:#666;font-size:14px;margin:1rem 0">
+        Scannez le QR code depuis ChassNid Admin après avoir généré un code 4 chiffres.
+      </p>
+    </div>
+
+    <div id="content-error" style="display:none" class="error">
+      Paramètre manquant. Scannez à nouveau le QR code.
+    </div>
   </div>
+
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
       const pilotId = params.get('pilot');
-      const status = document.getElementById('status');
-      const btn = document.getElementById('btn-open');
+      const code = params.get('code');
 
       if (!pilotId) {
-        status.textContent = 'Paramètre pilote manquant — scannez à nouveau le QR code.';
-        status.classList.add('error');
+        document.getElementById('content-error').style.display = 'block';
         return;
       }
 
-      // Stocker pilot_id dans cookie partagé avec la PWA
-      const expires = new Date(Date.now() + 365 * 864e5).toUTCString();
-      document.cookie = 'pilot_id=' + encodeURIComponent(pilotId) + '; expires=' + expires + '; path=/';
-      document.cookie = 'pilot_attached=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+      if (!code) {
+        document.getElementById('content-nocode').style.display = 'block';
+        return;
+      }
 
-      try { localStorage.setItem('pilot_id', pilotId); } catch(e) {}
-      try { localStorage.removeItem('pilot_attached'); } catch(e) {}
-
-      status.textContent = '✅ Pilote enregistré ! Appuyez sur le bouton pour ouvrir VigieNid.';
-      btn.href = 'https://berny70.github.io/NidTraque/?pilot=' + encodeURIComponent(pilotId);
-      btn.style.display = 'block';
+      // Afficher le code
+      document.getElementById('code-display').textContent = code;
+      document.getElementById('btn-open').href = 'https://berny70.github.io/NidTraque/?pilot=' + encodeURIComponent(pilotId);
+      document.getElementById('content-ok').style.display = 'block';
     })();
   </script>
 </body>
