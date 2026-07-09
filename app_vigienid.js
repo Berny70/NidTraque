@@ -476,17 +476,15 @@ window.rattacherParCode = async function() {
   msg.textContent = 'Vérification…';
   msg.style.color = '#666';
 
-  const { data: row, error } = await window.supabaseClient
-    .from('pilot_codes')
-    .select('id, pilot_id')
-    .eq('code', code)
-    .eq('used', false)
-    .gt('expires_at', new Date().toISOString())
+  // Chercher le pilote par son code permanent
+  const { data: pilot, error } = await window.supabaseClient
+    .from('admin_profiles')
+    .select('id')
+    .eq('code_sentinelle', code)
     .maybeSingle();
 
-  console.log('pilot_codes result:', JSON.stringify({data: row, error}));
-  if (error || !row) {
-    msg.textContent = 'Code invalide ou expiré. (' + (error?.message || 'non trouvé') + ')';
+  if (error || !pilot) {
+    msg.textContent = 'Code invalide. (' + (error?.message || 'non trouvé') + ')';
     msg.style.color = '#c00';
     return;
   }
@@ -502,7 +500,7 @@ window.rattacherParCode = async function() {
   // Insérer le nouveau rattachement
   const { error: err2 } = await window.supabaseClient
     .from('pilot_users')
-    .insert({ pilot_id: row.pilot_id, phone_id: phoneId });
+    .insert({ pilot_id: pilot.id, phone_id: phoneId });
 
   if (err2) {
     msg.textContent = 'Erreur de rattachement (' + err2.message + ').';
@@ -510,8 +508,8 @@ window.rattacherParCode = async function() {
     return;
   }
 
-  localStorage.setItem('pilot_id', row.pilot_id);
-  setCookie('pilot_id', row.pilot_id, 365);
+  localStorage.setItem('pilot_id', pilot.id);
+  setCookie('pilot_id', pilot.id, 365);
   localStorage.setItem('pilot_attached', 'true');
   setCookie('pilot_attached', 'true', 365);
 
