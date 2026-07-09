@@ -5,47 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rattachement VigieNid</title>
   <style>
-    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f0f4f0; }
-    .card { background: white; border-radius: 16px; padding: 2rem; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 320px; }
-    img { width: 80px; margin-bottom: 1rem; }
-    h2 { color: #2d6a2d; margin: 0 0 0.5rem; }
-    p { color: #666; font-size: 14px; }
-    .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #2d6a2d; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 1rem auto; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f0f4f0; padding: 1rem; }
+    .card { background: white; border-radius: 20px; padding: 2rem; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.12); max-width: 320px; width: 100%; }
+    .logo { font-size: 48px; margin-bottom: 1rem; }
+    h2 { color: #2d6a2d; font-size: 22px; margin-bottom: 0.5rem; }
+    .status { color: #666; font-size: 14px; margin: 1rem 0; padding: 0.75rem; border-radius: 10px; background: #f0f8f0; }
+    .btn { display: block; width: 100%; padding: 1rem; background: #2d6a2d; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; text-decoration: none; margin-top: 1.5rem; }
+    .btn:active { background: #1e4d1e; }
+    .error { color: #c00; background: #fff0f0; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>🐝 VigieNid</h2>
-    <p>Rattachement au pilote en cours…</p>
-    <div class="spinner"></div>
-    <p id="msg" style="font-size:12px;color:#999"></p>
+    <div class="logo">🐝</div>
+    <h2>VigieNid</h2>
+    <div class="status" id="status">Rattachement au pilote…</div>
+    <a class="btn" id="btn-open" href="#" style="display:none">Ouvrir VigieNid</a>
   </div>
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
       const pilotId = params.get('pilot');
-      const msg = document.getElementById('msg');
+      const status = document.getElementById('status');
+      const btn = document.getElementById('btn-open');
 
       if (!pilotId) {
-        msg.textContent = 'Paramètre pilote manquant.';
+        status.textContent = 'Paramètre pilote manquant — scannez à nouveau le QR code.';
+        status.classList.add('error');
         return;
       }
 
-      // Stocker dans cookie (partagé avec la PWA sur iOS)
+      // Stocker pilot_id dans cookie partagé avec la PWA
       const expires = new Date(Date.now() + 365 * 864e5).toUTCString();
       document.cookie = 'pilot_id=' + encodeURIComponent(pilotId) + '; expires=' + expires + '; path=/';
+      document.cookie = 'pilot_attached=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
 
-      // Stocker aussi en localStorage (pour les autres navigateurs)
       try { localStorage.setItem('pilot_id', pilotId); } catch(e) {}
       try { localStorage.removeItem('pilot_attached'); } catch(e) {}
 
-      msg.textContent = 'Redirection vers VigieNid…';
-
-      // Rediriger vers VigieNid après 1s
-      setTimeout(() => {
-        window.location.replace('https://berny70.github.io/NidTraque/?pilot=' + encodeURIComponent(pilotId));
-      }, 1000);
+      status.textContent = '✅ Pilote enregistré ! Appuyez sur le bouton pour ouvrir VigieNid.';
+      btn.href = 'https://berny70.github.io/NidTraque/?pilot=' + encodeURIComponent(pilotId);
+      btn.style.display = 'block';
     })();
   </script>
 </body>
