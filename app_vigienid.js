@@ -492,20 +492,23 @@ window.rattacherParCode = async function() {
   }
 
   const phoneId = getPhoneId();
+
+  // Supprimer l'ancien rattachement si existant
+  await window.supabaseClient
+    .from('pilot_users')
+    .delete()
+    .eq('phone_id', phoneId);
+
+  // Insérer le nouveau rattachement
   const { error: err2 } = await window.supabaseClient
     .from('pilot_users')
-    .upsert({ pilot_id: row.pilot_id, phone_id: phoneId }, { onConflict: 'phone_id' });
+    .insert({ pilot_id: row.pilot_id, phone_id: phoneId });
 
   if (err2) {
-    msg.textContent = 'Erreur de rattachement.';
+    msg.textContent = 'Erreur de rattachement (' + err2.message + ').';
     msg.style.color = '#c00';
     return;
   }
-
-  await window.supabaseClient
-    .from('pilot_codes')
-    .update({ used: true })
-    .eq('id', row.id);
 
   localStorage.setItem('pilot_id', row.pilot_id);
   setCookie('pilot_id', row.pilot_id, 365);
