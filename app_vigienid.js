@@ -124,6 +124,8 @@ window.lockGPS = function() {
 // ==========================
 // CALIBRATION BOUSSOLE
 // ==========================
+let _calibHintTimer = null;
+
 function showCalibrationHint() {
   let el = document.getElementById('compass-calib-hint');
   if (!el) {
@@ -131,16 +133,21 @@ function showCalibrationHint() {
     el.id = 'compass-calib-hint';
     el.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);' +
       'background:#f39c12;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;' +
-      'z-index:9999;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+      'z-index:9999;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;';
     el.innerHTML = '🧭 Boussole imprécise — faire un "8" avec le téléphone';
+    el.addEventListener('click', () => hideCalibrationHint());
     document.body.appendChild(el);
   }
   el.style.display = 'block';
+  // Masquer automatiquement après 5 secondes
+  if (_calibHintTimer) clearTimeout(_calibHintTimer);
+  _calibHintTimer = setTimeout(() => hideCalibrationHint(), 5000);
 }
 
 function hideCalibrationHint() {
   const el = document.getElementById('compass-calib-hint');
   if (el) el.style.display = 'none';
+  if (_calibHintTimer) { clearTimeout(_calibHintTimer); _calibHintTimer = null; }
 }
 
 function startCompass() {
