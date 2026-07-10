@@ -184,6 +184,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
         <div class="header-label" style="margin-top:4px;">Pilote</div>
         <div class="header-value pilot" id="hdr-pilote">—</div>
         <div class="header-label" style="margin-top:4px;">Sentinelle</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div class="header-value sentinel" id="hdr-sentinel">—</div>
+          <button onclick="editPseudo()" style="background:none;border:none;font-size:14px;cursor:pointer;padding:0;line-height:1;" title="Modifier mon pseudo">✏️</button>
+        </div>
       </div>
       <div style="text-align:right;">
         <div class="header-authors">Barrois-Lambour</div>
@@ -191,11 +195,6 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
         <div class="header-label" style="margin-top:4px;">Territoire</div>
         <div class="header-value territory" id="hdr-territoire">—</div>
       </div>
-    </div>
-    <div class="header-label" style="display:none;">Sentinelle</div>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <div class="header-value sentinel" id="hdr-sentinel">—</div>
-      <button onclick="editPseudo()" style="background:none;border:none;font-size:14px;cursor:pointer;padding:0;line-height:1;" title="Modifier mon pseudo">✏️</button>
     </div>
   </div>
 </div>
