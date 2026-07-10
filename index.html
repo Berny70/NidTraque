@@ -177,25 +177,22 @@ html, body { height: 100%; font-family: var(--font); background: var(--card); ov
     </div>
   </div>
   <div class="header-grid">
-    <div class="header-label">Admin.</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div class="header-value" id="hdr-admin">—</div>
-      <div style="text-align:right;">
-        <div class="header-authors">Barrois-Lambour</div>
-        <div class="header-version" style="font-size:13px;font-weight:600;color:#4a7090;">V 1.6.3</div>
-      </div>
-    </div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
       <div>
-        <div class="header-label">Pilote</div>
+        <div class="header-label">Admin.</div>
+        <div class="header-value" id="hdr-admin">—</div>
+        <div class="header-label" style="margin-top:4px;">Pilote</div>
         <div class="header-value pilot" id="hdr-pilote">—</div>
+        <div class="header-label" style="margin-top:4px;">Sentinelle</div>
       </div>
       <div style="text-align:right;">
-        <div class="header-label">Territoire</div>
+        <div class="header-authors">Barrois-Lambour</div>
+        <div class="header-version" style="font-size:13px;font-weight:600;color:#4a7090;">V 1.6.4</div>
+        <div class="header-label" style="margin-top:4px;">Territoire</div>
         <div class="header-value territory" id="hdr-territoire">—</div>
       </div>
     </div>
-    <div class="header-label">Sentinelle</div>
+    <div class="header-label" style="display:none;">Sentinelle</div>
     <div style="display:flex;align-items:center;gap:6px;">
       <div class="header-value sentinel" id="hdr-sentinel">—</div>
       <button onclick="editPseudo()" style="background:none;border:none;font-size:14px;cursor:pointer;padding:0;line-height:1;" title="Modifier mon pseudo">✏️</button>
