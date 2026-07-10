@@ -435,14 +435,13 @@ window.editPseudo = async function() {
 };
 </script>
 
-<div id="code-rattachement-section" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#f9f9f9;border-top:1px solid #e0e0e0;padding:10px 16px;text-align:center;z-index:999;">
-  <div style="font-size:12px;color:#999;margin-bottom:6px;">🔢 Code de rattachement pilote</div>
-  <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
-    <input type="tel" id="input-code-rattach" maxlength="4" placeholder="0000"
-      style="font-size:24px;font-weight:700;width:90px;text-align:center;border:1px solid #ccc;border-radius:8px;padding:4px;font-family:monospace;letter-spacing:6px;">
-    <button onclick="rattacherParCode()" style="background:#2d5a27;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;cursor:pointer;">OK</button>
+<div id="code-rattachement-section" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#f5f5f5;border-top:1px solid #ddd;padding:6px 12px;z-index:999;">
+  <div style="display:flex;gap:6px;align-items:center;">
+    <span style="font-size:11px;color:#aaa;white-space:nowrap;">🔢 Code pilote</span>
+    <input type="tel" id="input-code-rattach" maxlength="4" placeholder="0000" style="font-size:16px;font-weight:700;width:70px;text-align:center;border:1px solid #ccc;border-radius:6px;padding:3px 4px;font-family:monospace;letter-spacing:4px;">
+    <button onclick="rattacherParCode()" style="background:#2d5a27;color:white;border:none;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:600;cursor:pointer;">OK</button>
+    <span id="code-rattach-msg" style="font-size:11px;color:#666;flex:1;"></span>
   </div>
-  <div id="code-rattach-msg" style="font-size:12px;margin-top:4px;color:#666;"></div>
 </div>
 </body>
 <!-- Service Worker + PWA Install -->
