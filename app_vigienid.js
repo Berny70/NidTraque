@@ -462,11 +462,9 @@ async function autoAttachPilot() {
 
 // Afficher la section code si pas encore rattaché
 function checkShowCodeSection() {
-  const attached = getCookie('pilot_attached') || localStorage.getItem('pilot_attached');
-  if (!attached) {
-    const el = document.getElementById('code-rattachement-section');
-    if (el) el.style.display = 'block';
-  }
+  // Toujours visible — permet de changer de pilote en cas d'erreur
+  const el = document.getElementById('code-rattachement-section');
+  if (el) el.style.display = 'block';
 }
 
 window.rattacherParCode = async function() {
@@ -520,7 +518,7 @@ window.rattacherParCode = async function() {
   localStorage.setItem('pilot_attached', 'true');
   setCookie('pilot_attached', 'true', 365);
 
-  document.getElementById('code-rattachement-section').style.display = 'none';
+  // bandeau toujours visible
   msg.textContent = '';
   alert('Rattachement reussi ! Rechargez la page.');
 };
