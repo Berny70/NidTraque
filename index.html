@@ -362,12 +362,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   const phoneId = (typeof getPhoneId === 'function') ? getPhoneId() : localStorage.getItem('phone_id');
   if (phoneId) {
     const { data: ps } = await window.supabaseClient
-      .from('pilot_user_stats')
+      .from('pilot_users')
       .select('pseudo')
       .eq('phone_id', phoneId)
-      .eq('pilot_id', pilotId)
       .maybeSingle();
-    document.getElementById('hdr-sentinel').textContent = ps?.pseudo || phoneId.slice(0, 10);
+    document.getElementById('hdr-sentinel').textContent = ps?.pseudo || localStorage.getItem('my_pseudo') || phoneId.slice(0, 10);
   }
 
   // Bouton partage/paramètres : uniquement si la personne connectée
