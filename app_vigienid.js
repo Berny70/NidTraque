@@ -437,23 +437,12 @@ async function autoAttachPilot() {
     return;
   }
 
-  // Vérifier si le pilote du QR code a ce phone_id déjà enregistré
-  // Sinon, mettre à jour son phone_id dans admin_profiles
-  const { data: pilotData } = await window.supabaseClient
-    .from('admin_profiles')
-    .select('id, phone_id')
-    .eq('id', pilotId)
-    .maybeSingle();
-
-  if (pilotData && !pilotData.phone_id) {
-    // Pilote sans phone_id — mettre à jour via RPC sécurisée
-    await window.supabaseClient
-      .rpc('vigienid_set_phone_id', { p_pilot_id: pilotId, p_phone_id: phoneId });
-    // Et rattacher à lui-même
-    await attachPilotIfNeeded(pilotId, phoneId);
-    localStorage.setItem('pilot_attached', '1');
-    return;
-  }
+  // NOTE : l'association phone_id ↔ pilote se fait désormais UNIQUEMENT
+  // via une connexion réelle (email + PIN) dans ChassNid Admin, qui appelle
+  // chassnid_register_phone_id de façon sécurisée (session vérifiée).
+  // On ne devine plus "premier scan = c'est le pilote" ici : un scan du
+  // propre QR code d'un pilote par un tiers (test, curiosité...) ne doit
+  // jamais donner accès aux outils pilote (Paramètres/Partager) à ce tiers.
 
   // Sentinelle normale — rattacher au pilote du QR code si pas encore fait
   if (!localStorage.getItem('pilot_attached')) {
