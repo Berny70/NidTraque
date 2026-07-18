@@ -81,6 +81,28 @@ function getPhoneId() {
 }
 
 // ==========================
+// RATTACHEMENT SANS UPDATE
+// ==========================
+// Remplace l'ancien upsert() : la policy RLS UPDATE sur pilot_users a été
+// retirée par sécurité (elle était trop permissive), donc un upsert qui
+// tombe sur un conflit (ligne déjà existante) échouerait désormais.
+// On vérifie d'abord l'existence, puis on insère seulement si absent —
+// aucun droit UPDATE n'est nécessaire pour ce cas d'usage.
+async function attachPilotIfNeeded(pilotId, phoneId) {
+  if (!window.supabaseClient) return { error: null };
+  const { data: existing } = await window.supabaseClient
+    .from('pilot_users')
+    .select('phone_id')
+    .eq('pilot_id', pilotId)
+    .eq('phone_id', phoneId)
+    .maybeSingle();
+  if (existing) return { error: null }; // déjà rattaché, rien à faire
+  return window.supabaseClient
+    .from('pilot_users')
+    .insert({ pilot_id: pilotId, phone_id: phoneId });
+}
+
+// ==========================
 // GPS
 // ==========================
 function startGPS() {
@@ -275,9 +297,7 @@ window.doSignal = async function() {
   // Rattachement pilote
   const pilotId = localStorage.getItem('pilot_id') || DEFAULT_PILOT_ID;
   if (!localStorage.getItem('pilot_attached') && window.supabaseClient) {
-    const { error: attachErr } = await window.supabaseClient
-      .from('pilot_users')
-      .upsert({ pilot_id: pilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
+    const { error: attachErr } = await attachPilotIfNeeded(pilotId, phoneId);
     if (!attachErr) localStorage.setItem('pilot_attached', '1');
   }
 
@@ -412,9 +432,7 @@ async function autoAttachPilot() {
   if (pilotProfile) {
     // C'est un pilote — rattacher automatiquement à son propre secteur
     const selfPilotId = pilotProfile.id;
-    await window.supabaseClient
-      .from('pilot_users')
-      .upsert({ pilot_id: selfPilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
+    await attachPilotIfNeeded(selfPilotId, phoneId);
     localStorage.setItem('pilot_attached', '1');
     return;
   }
@@ -432,18 +450,14 @@ async function autoAttachPilot() {
     await window.supabaseClient
       .rpc('vigienid_set_phone_id', { p_pilot_id: pilotId, p_phone_id: phoneId });
     // Et rattacher à lui-même
-    await window.supabaseClient
-      .from('pilot_users')
-      .upsert({ pilot_id: pilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
+    await attachPilotIfNeeded(pilotId, phoneId);
     localStorage.setItem('pilot_attached', '1');
     return;
   }
 
   // Sentinelle normale — rattacher au pilote du QR code si pas encore fait
   if (!localStorage.getItem('pilot_attached')) {
-    const { error } = await window.supabaseClient
-      .from('pilot_users')
-      .upsert({ pilot_id: pilotId, phone_id: phoneId }, { onConflict: 'pilot_id,phone_id' });
+    const { error } = await attachPilotIfNeeded(pilotId, phoneId);
     if (!error) localStorage.setItem('pilot_attached', '1');
   }
 }
@@ -498,9 +512,7 @@ window.rattacherParCode = async function() {
 
   // Supprimer l'ancien rattachement si existant
   await window.supabaseClient
-    .from('pilot_users')
-    .delete()
-    .eq('phone_id', phoneId);
+    .rpc('vigienid_delete_attachment', { p_phone_id: phoneId });
 
   // Insérer le nouveau rattachement
   const { error: err2 } = await window.supabaseClient
