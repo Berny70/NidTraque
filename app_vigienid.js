@@ -100,16 +100,13 @@ function getPhoneId() {
 // aucun droit UPDATE n'est nécessaire pour ce cas d'usage.
 async function attachPilotIfNeeded(pilotId, phoneId) {
   if (!window.supabaseClient) return { error: null };
-  const { data: existing } = await window.supabaseClient
-    .from('pilot_users')
-    .select('phone_id')
-    .eq('pilot_id', pilotId)
-    .eq('phone_id', phoneId)
-    .maybeSingle();
-  if (existing) return { error: null }; // déjà rattaché, rien à faire
-  return window.supabaseClient
-    .from('pilot_users')
-    .insert({ pilot_id: pilotId, phone_id: phoneId });
+  const { data, error } = await window.supabaseClient
+    .rpc('vigienid_attach', { p_phone_id: phoneId, p_pilot_id: pilotId });
+  if (error) return { error };
+  if (data?.error === 'blocked') {
+    return { error: { message: data.message || 'Contactez votre pilote.' }, blocked: true };
+  }
+  return { error: data?.error ? { message: data.error } : null };
 }
 
 // ==========================
@@ -307,7 +304,12 @@ window.doSignal = async function() {
   // Rattachement pilote
   const pilotId = localStorage.getItem('pilot_id') || DEFAULT_PILOT_ID;
   if (!localStorage.getItem('pilot_attached') && window.supabaseClient) {
-    const { error: attachErr } = await attachPilotIfNeeded(pilotId, phoneId);
+    const { error: attachErr, blocked } = await attachPilotIfNeeded(pilotId, phoneId);
+    if (blocked) {
+      showToast('🚫 ' + (attachErr?.message || 'Contactez votre pilote.'));
+      if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
+      return;
+    }
     if (!attachErr) localStorage.setItem('pilot_attached', '1');
   }
 
@@ -455,8 +457,12 @@ async function autoAttachPilot() {
 
   // Sentinelle normale — rattacher au pilote du QR code si pas encore fait
   if (!localStorage.getItem('pilot_attached')) {
-    const { error } = await attachPilotIfNeeded(pilotId, phoneId);
-    if (!error) localStorage.setItem('pilot_attached', '1');
+    const { error, blocked } = await attachPilotIfNeeded(pilotId, phoneId);
+    if (blocked) {
+      showToast('🚫 ' + (error?.message || 'Contactez votre pilote.'));
+    } else if (!error) {
+      localStorage.setItem('pilot_attached', '1');
+    }
   }
 }
 
@@ -508,17 +514,21 @@ window.rattacherParCode = async function() {
 
   const phoneId = getPhoneId();
 
-  // Supprimer l'ancien rattachement si existant
+  // Supprimer l'ancien rattachement si existant (autre pilote)
   await window.supabaseClient
     .rpc('vigienid_delete_attachment', { p_phone_id: phoneId });
 
-  // Insérer le nouveau rattachement
-  const { error: err2 } = await window.supabaseClient
-    .from('pilot_users')
-    .insert({ pilot_id: pilot.id, phone_id: phoneId });
+  // Rattacher au nouveau pilote (bloqué si sentinelle supprimée par ce pilote)
+  const { data: attachData, error: err2 } = await window.supabaseClient
+    .rpc('vigienid_attach', { p_phone_id: phoneId, p_pilot_id: pilot.id });
 
   if (err2) {
     msg.textContent = 'Erreur de rattachement (' + err2.message + ').';
+    msg.style.color = '#c00';
+    return;
+  }
+  if (attachData?.error === 'blocked') {
+    msg.textContent = '🚫 ' + (attachData.message || 'Contactez votre pilote.');
     msg.style.color = '#c00';
     return;
   }
