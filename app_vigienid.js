@@ -346,15 +346,14 @@ window.doSignal = async function() {
 // ==========================
 window.cancelLast = async function() {
   if (!lastSignalId) { showToast('Aucun signalement à annuler'); return; }
-  const { error } = await window.supabaseClient
-    .from('chrono_frelon_geo')
-    .delete()
-    .eq('id', lastSignalId);
-  if (!error) {
+  const { data, error } = await window.supabaseClient
+    .rpc('vigienid_cancel_signal', { p_signal_id: lastSignalId, p_phone_id: getPhoneId() });
+  const result = !error && data ? data : null;
+  if (!error && result?.ok) {
     showToast('↩️ Signalement annulé');
     lastSignalId = null;
   } else {
-    showToast('❌ ' + error.message);
+    showToast('❌ ' + (error?.message || 'Échec de l\'annulation'));
   }
 };
 
