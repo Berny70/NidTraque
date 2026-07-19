@@ -328,7 +328,11 @@ window.doSignal = async function() {
     .single();
 
   if (error) {
-    showToast('❌ Erreur : ' + error.message);
+    if (error.message?.includes('sentinelle_supprimee')) {
+      showToast('🚫 Contactez votre pilote pour être réintégré(e).');
+    } else {
+      showToast('❌ Erreur : ' + error.message);
+    }
   } else {
     lastSignalId = data?.id || null;
     showToast('✅ Signalement enregistré !');
