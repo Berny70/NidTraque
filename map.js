@@ -189,7 +189,9 @@ function afficherObservations() {
     const destStr   = obs.destination   ? `<br>🌿 ${obs.destination}`   : '';
     const freqStr   = obs.frequentation ? `<br>🐝 ${obs.frequentation}` : '';
     const isMine    = obs.phone_id === localStorage.getItem('phone_id');
-    const pseudoStr = isMine ? '👤 Moi' : `📱 ${(obs.phone_id||'').substring(0,8)}…`;
+    const pseudoStr = isMine
+      ? '👤 Moi'
+      : (obs.pseudo ? `🏷️ ${obs.pseudo}` : `📱 ${(obs.phone_id||'').substring(0,8)}…`);
 
     const popup = `<div style="font-size:13px;line-height:1.8;min-width:160px">
       <b>${pseudoStr}</b><br>
@@ -245,7 +247,8 @@ async function chargerDonneesAutour(lat, lon) {
     {
       lat,
       lon,
-      radius_m: 10000
+      radius_m: 10000,
+      p_phone_id: localStorage.getItem('phone_id'),
     }
   );
 
