@@ -54,9 +54,19 @@ function getCookie(name) {
     const cookiePilot = getCookie('pilot_id');
     localStorage.setItem('pilot_id', cookiePilot || DEFAULT_PILOT_ID);
   } else {
-    // localStorage déjà rempli : on s'assure que le cookie est
-    // synchronisé pour les futures installations PWA.
-    setCookie('pilot_id', localStorage.getItem('pilot_id'), 365);
+    // localStorage déjà rempli, mais sur iOS la PWA (icône) et Safari
+    // ont des localStorage SÉPARÉS alors que le cookie est partagé.
+    // Si un rattachement plus récent a été fait côté Safari (scan QR,
+    // saisie de code), le cookie le reflète déjà — on lui fait
+    // confiance s'il diffère de notre propre valeur, potentiellement
+    // périmée dans ce contexte isolé.
+    const cookiePilot = getCookie('pilot_id');
+    if (cookiePilot && cookiePilot !== localStorage.getItem('pilot_id')) {
+      localStorage.setItem('pilot_id', cookiePilot);
+      localStorage.removeItem('pilot_attached'); // forcer le re-rattachement
+    } else {
+      setCookie('pilot_id', localStorage.getItem('pilot_id'), 365);
+    }
   }
 })();
 
