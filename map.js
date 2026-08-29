@@ -12,12 +12,15 @@ let declinaison = _savedDecl !== null ? (parseFloat(_savedDecl) || 3) : 3;
 // DONNÉES
 // ==========================
 let observations = [];
+let nests = [];
+let nestsVisible = false; // masqué par défaut, cohérent avec ChassNid Admin
 
 // ==========================
 // INITIALISATION CARTE
 // ==========================
 const map = L.map("map").setView([46.5, 2.5], 6);
 const observationsLayer = L.layerGroup().addTo(map);
+const nestsLayer = L.layerGroup(); // ajoutée/retirée selon nestsVisible
 
 // ── FONDS DE CARTE (alignés sur ChassNid Admin) ────────────
 const BASEMAPS = {
@@ -43,13 +46,23 @@ function addBasemapControl() {
   const ctrl = L.control({ position: 'bottomright' });
   ctrl.onAdd = () => {
     const div = L.DomUtil.create('div', 'basemap-control');
-    div.innerHTML = Object.entries(BASEMAPS).map(([key, bm]) =>
-      `<button class="basemap-btn${key === (localStorage.getItem('chassnid_basemap') || 'osm') ? ' basemap-btn--active' : ''}" data-basemap="${key}">${bm.label}</button>`
-    ).join('');
+    div.innerHTML =
+      `<button id="btn-toggle-nests-vn" style="
+        width:100%;margin-bottom:6px;padding:6px 10px;
+        background:#fff;color:#333;
+        border:1px solid rgba(0,0,0,0.15);border-radius:8px;
+        font-family:'DM Sans',sans-serif;font-size:13px;
+        font-weight:600;cursor:pointer;text-align:left">
+        🪺 Nids ${nestsVisible ? 'visibles' : 'masqués'}
+      </button>` +
+      Object.entries(BASEMAPS).map(([key, bm]) =>
+        `<button class="basemap-btn${key === (localStorage.getItem('chassnid_basemap') || 'osm') ? ' basemap-btn--active' : ''}" data-basemap="${key}">${bm.label}</button>`
+      ).join('');
     L.DomEvent.disableClickPropagation(div);
     div.addEventListener('click', e => {
       const btn = e.target.closest('.basemap-btn');
       if (btn) applyBasemap(btn.dataset.basemap);
+      if (e.target.closest('#btn-toggle-nests-vn')) toggleNestsVisibility();
     });
     return div;
   };
@@ -58,6 +71,61 @@ function addBasemapControl() {
 
 applyBasemap(localStorage.getItem('chassnid_basemap') || 'osm');
 addBasemapControl();
+
+// ==========================
+// NIDS (affichage sur la carte partagée)
+// ==========================
+
+function nestIcon(type) {
+  const isPrimaire = type === 'primaire';
+  return L.divIcon({
+    html: `<div style="
+      width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+      font-size:14px;border-radius:50%;
+      border:2px solid ${isPrimaire ? '#e07b00' : '#c0392b'};
+      background:${isPrimaire ? '#fff3e0' : '#fdecea'};
+      box-shadow:0 2px 5px rgba(0,0,0,0.35);
+    ">🪺</div>`,
+    className: '',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+}
+
+async function chargerNidsAutour(lat, lon) {
+  const { data, error } = await window.supabaseClient.rpc(
+    "get_nearby_nests",
+    { lat, lon, radius_m: 10000 }
+  );
+  if (error) {
+    console.error("Erreur RPC get_nearby_nests :", error);
+    return [];
+  }
+  return data || [];
+}
+
+function afficherNids() {
+  nestsLayer.clearLayers();
+  nests.forEach(n => {
+    if (!n.lat || !n.lon) return;
+    L.marker([n.lat, n.lon], { icon: nestIcon(n.type) })
+      .bindPopup(`
+        <div style="font-size:13px;line-height:1.6">
+          🪺 Nid ${n.type === 'primaire' ? '🟠 primaire' : '🔴 secondaire'}<br>
+          ${n.found_at ? new Date(n.found_at).toLocaleDateString('fr-FR') : (n.annee || '')}
+        </div>
+      `, { maxWidth: 200 })
+      .addTo(nestsLayer);
+  });
+}
+
+function toggleNestsVisibility() {
+  nestsVisible = !nestsVisible;
+  const btn = document.getElementById('btn-toggle-nests-vn');
+  if (btn) btn.textContent = `🪺 Nids ${nestsVisible ? 'visibles' : 'masqués'}`;
+  if (nestsVisible) nestsLayer.addTo(map);
+  else map.removeLayer(nestsLayer);
+}
 
 // ==========================
 // MODE LOCAL / MES SIGNALEMENTS
@@ -305,6 +373,8 @@ async function chargerObservationsPartagees() {
       const lon = pos.coords.longitude;
 
       observations = await chargerDonneesAutour(lat, lon);
+      nests = await chargerNidsAutour(lat, lon);
+      afficherNids();
 
       // normalisation distance
       observations = observations.map(o => {
