@@ -189,9 +189,17 @@ function startCompass() {
       try {
         const r = await DeviceOrientationEvent.requestPermission();
         if (overlay) overlay.classList.remove('show');
-        if (r === 'granted') bindCompass();
+        if (r === 'granted') {
+          bindCompass();
+        } else {
+          // Refusé : sans ce message, l'utilisateur ne voit jamais
+          // pourquoi la direction ne fonctionne jamais (position OK,
+          // mais boussole muette en silence).
+          showToast('🧭 Boussole refusée. Réglages → Safari → Position/Mouvement → réactivez, puis rechargez la page.');
+        }
       } catch(e) {
         if (overlay) overlay.classList.remove('show');
+        showToast('🧭 Erreur boussole : ' + (e.message || 'réessayez ou rechargez la page.'));
       }
     };
   } else {
@@ -211,6 +219,16 @@ function bindCompass() {
   }
   compassListenersAdded = true;
   compassActive = true;
+
+  // Sécurité : permission accordée mais aucune donnée valide reçue après
+  // quelques secondes -> souvent le réglage global iOS "Accès Mouvement
+  // et orientation" (Réglages > Safari > Avancé), distinct du message
+  // d'autorisation par site qu'on vient d'accepter.
+  setTimeout(() => {
+    if (liveHeading === null) {
+      showToast('🧭 Boussole muette. Vérifiez Réglages → Safari → Avancé → "Accès mouvement et orientation".');
+    }
+  }, 6000);
 }
 
 function onOrientation(e) {
