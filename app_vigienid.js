@@ -353,6 +353,7 @@ window.doSignal = async function() {
     }
   } else {
     lastSignalId = data?.id || null;
+    if (lastSignalId) localStorage.setItem('vigienid_last_signal_id', String(lastSignalId));
     showToast('✅ Signalement enregistré !');
     // Réinitialiser
     lockedPos     = null;
@@ -379,6 +380,14 @@ window.doSignal = async function() {
 // ANNULER DERNIER
 // ==========================
 window.cancelLast = async function() {
+  // La variable mémoire ne survit pas à une fermeture/réouverture de
+  // l'appli - on retombe sur la valeur sauvegardée le cas échéant
+  // (sinon "Aucun signalement à annuler" s'affichait à tort, même
+  // quand un vrai signalement récent existait bien en base).
+  if (!lastSignalId) {
+    const saved = localStorage.getItem('vigienid_last_signal_id');
+    if (saved) lastSignalId = saved;
+  }
   if (!lastSignalId) { showToast('Aucun signalement à annuler'); return; }
   const { data, error } = await window.supabaseClient
     .rpc('vigienid_cancel_signal', { p_signal_id: lastSignalId, p_phone_id: getPhoneId() });
@@ -386,6 +395,7 @@ window.cancelLast = async function() {
   if (!error && result?.ok) {
     showToast('↩️ Signalement annulé');
     lastSignalId = null;
+    localStorage.removeItem('vigienid_last_signal_id');
   } else {
     showToast('❌ ' + (error?.message || 'Échec de l\'annulation'));
   }
