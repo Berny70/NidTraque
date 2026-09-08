@@ -16,6 +16,7 @@ let lastHeading    = null;
 let lockedHeading  = null;   // boussole verrouillée
 let compassActive  = false;
 let compassListenersAdded = false;
+let _visibilityListenerAdded = false;
 
 let livePos    = null;       // GPS live {lat, lon}
 let lockedPos  = null;       // GPS verrouillé
@@ -209,14 +210,7 @@ function startCompass() {
 
 function bindCompass() {
   if (compassListenersAdded) return;
-  const isIOS = typeof DeviceOrientationEvent !== 'undefined' &&
-                typeof DeviceOrientationEvent.requestPermission === 'function';
-  if (isIOS) {
-    window.addEventListener('deviceorientation', onOrientation, true);
-  } else {
-    window.addEventListener('deviceorientationabsolute', onOrientation, true);
-    window.addEventListener('deviceorientation', onOrientation, true);
-  }
+  _attachOrientationListeners();
   compassListenersAdded = true;
   compassActive = true;
 
@@ -229,6 +223,38 @@ function bindCompass() {
       showToast('🧭 Boussole muette. Vérifiez Réglages → Safari → Avancé → "Accès mouvement et orientation".');
     }
   }, 6000);
+
+  // Réabonnement au retour au premier plan : sur Android notamment,
+  // le verrouillage de l'écran ou le passage en arrière-plan (courant
+  // en marchant vers un point d'observation) peut couper silencieusement
+  // les écouteurs de capteurs, sans que rien ne prévienne l'appli - la
+  // boussole restait alors figée/muette une fois revenu au premier plan,
+  // sans lien avec une permission.
+  if (!_visibilityListenerAdded) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && compassActive) {
+        _detachOrientationListeners();
+        _attachOrientationListeners();
+      }
+    });
+    _visibilityListenerAdded = true;
+  }
+}
+
+function _attachOrientationListeners() {
+  const isIOS = typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function';
+  if (isIOS) {
+    window.addEventListener('deviceorientation', onOrientation, true);
+  } else {
+    window.addEventListener('deviceorientationabsolute', onOrientation, true);
+    window.addEventListener('deviceorientation', onOrientation, true);
+  }
+}
+
+function _detachOrientationListeners() {
+  window.removeEventListener('deviceorientation', onOrientation, true);
+  window.removeEventListener('deviceorientationabsolute', onOrientation, true);
 }
 
 function onOrientation(e) {
