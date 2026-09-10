@@ -242,14 +242,17 @@ function bindCompass() {
 }
 
 function _attachOrientationListeners() {
-  const isIOS = typeof DeviceOrientationEvent !== 'undefined' &&
-                typeof DeviceOrientationEvent.requestPermission === 'function';
-  if (isIOS) {
-    window.addEventListener('deviceorientation', onOrientation, true);
-  } else {
-    window.addEventListener('deviceorientationabsolute', onOrientation, true);
-    window.addEventListener('deviceorientation', onOrientation, true);
-  }
+  // Attache toujours les deux écouteurs, sans se fier à la détection
+  // iOS (typeof requestPermission === "function"), qui n'est pas fiable
+  // à 100% - certaines versions de Chrome Android la supportent aussi
+  // partiellement, ce qui pouvait faire sauter à tort l'écouteur
+  // deviceorientationabsolute dont certains appareils Android ont
+  // besoin (bug confirmé et corrigé dans Pot à Mèche - même code ici).
+  // Sans risque sur iOS : onOrientation() donne de toute façon la
+  // priorité à webkitCompassHeading dès qu'il est présent, peu importe
+  // quel évènement l'a déclenché.
+  window.addEventListener('deviceorientationabsolute', onOrientation, true);
+  window.addEventListener('deviceorientation', onOrientation, true);
 }
 
 function _detachOrientationListeners() {
